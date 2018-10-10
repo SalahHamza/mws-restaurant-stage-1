@@ -4,7 +4,7 @@
  * of that path when we we need to
  */
 module.exports = {
-  destBase: './app',
+  destBase: 'app',
   styles: {
     src: 'src/css/**/*.css',
     dest: 'app/assets/css'
@@ -65,5 +65,9 @@ module.exports = {
   data: {
     src: 'src/data/*.json',
     dest: 'app/assets/data'
+  },
+  revManifest: {
+    dest: 'app/assets/',
+    path: 'app/assets/rev-manifest.json'
   }
 };
