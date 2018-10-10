@@ -14,7 +14,6 @@
     "@babel/core": "^7.1.2",
     "@babel/preset-env": "^7.1.0",
     "browser-sync": "^2.24.7",
-    "compression": "^1.7.3",
     "gulp": "^4.0.0",
     "gulp-autoprefixer": "^6.0.0",
     "gulp-babel": "^8.0.0",
@@ -39,8 +38,10 @@
   },
   "homepage": "https://github.com/SalahHamza/mws-restaurant-stage-1#readme",
   "dependencies": {
+    "compression": "^1.7.3",
     "ejs": "^2.6.1",
     "express": "^4.16.3",
-    "spdy": "^3.4.7"
+    "spdy": "^3.4.7",
+    "yargs": "^12.0.2"
   }
 }
