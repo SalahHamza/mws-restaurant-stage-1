@@ -42,6 +42,14 @@ router.get('/sw.js', (req, res) => {
   readStream.pipe(res);
 });
 
+// between hard coding a new route and installing serve-static
+// and setting max-age=0 for /rev-manifest.json, 3 lines of code
+// is less costy
+router.get('/rev-manifest.json', (req, res) => {
+  const readStream = fs.createReadStream(`${__dirname}/../app/rev-manifest.json`);
+  readStream.pipe(res);
+});
+
 router.get('/', (req, res) => {
   res.render('index.html');
 });
