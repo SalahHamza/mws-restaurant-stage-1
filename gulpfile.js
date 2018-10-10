@@ -39,7 +39,7 @@ const config = require('./config');
     Styles tasks
 ******************/
 
-function stylesTask() {
+gulp.task('styles', function() {
   return gulp.src(config.styles.src)
     .pipe(
       autoprefixer({
@@ -53,11 +53,9 @@ function stylesTask() {
     .pipe(gulp.dest(config.styles.dest))
     .pipe(sourcemaps.write())
     .pipe(browserSync.stream());
-}
+});
 
-exports.styles = stylesTask;
-
-function stylesProdTask() {
+gulp.task('build:styles', function () {
   return gulp.src(config.styles.src)
     .pipe(sourcemaps.init())
     // auto prefexing
@@ -70,20 +68,20 @@ function stylesProdTask() {
     .pipe(rev())
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(config.styles.dest))
-    .pipe(rev.manifest({
+    .pipe(rev.manifest(config.revManifest.path, {
+      base: config.revManifest.dest,
       merge: true
     }))
-    .pipe(gulp.dest(config.destBase));
-}
+    .pipe(gulp.dest(config.revManifest.dest));
+});
 
-exports['styles-prod'] = stylesProdTask;
 
 
 /******************
     Linting tasks
 ******************/
 
-function lintTask() {
+gulp.task('lint', function() {
   return gulp.src(config.lint.src)
     // eslint() attaches the lint output to the 'eslint' property
     // of the file object so it can be used by other modules.
@@ -94,9 +92,7 @@ function lintTask() {
     // To have the process exit with an error code (1) on
     // lint error, return the stream and pipe to failAfterError last.
     .pipe(eslint.failAfterError());
-}
-
-exports.lint = lintTask;
+});
 
 /******************
     Scripts tasks
@@ -108,7 +104,7 @@ exports.lint = lintTask;
  * concat scripts and transpile to es5
  */
 function concatScript(details) {
-  gulp.src(details.src)
+  return () => gulp.src(details.src)
     .pipe(sourcemaps.init())
     .pipe(babel({
       presets: ['@babel/preset-env']
@@ -118,46 +114,47 @@ function concatScript(details) {
     .pipe(gulp.dest(details.dest));
 }
 
-function jsScriptsTask(done){
-  concatScript(config.js.main);
-  concatScript(config.js.inside);
-  done();
-}
+gulp.task('js-scripts', gulp.parallel(
+  concatScript(config.js.main),
+  concatScript(config.js.inside)
+));
 
-exports['js-scripts'] = jsScriptsTask;
 
 /**
  * concat, uglify and transpile (to es5) scripts
  */
 function concatAndUglifyScript(details) {
-  gulp.src(details.src)
+  return () => gulp.src(details.src)
     .pipe(sourcemaps.init())
     .pipe(babel({
       presets: ['@babel/preset-env']
     }))
-    .pipe(concat(details.fileName))
+    .pipe(concat({path: details.fileName, cwd: ''}))
     .pipe(uglify())
     .pipe(rev())
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(details.dest))
-    .pipe(rev.manifest({
+    .pipe(rev.manifest(config.revManifest.path, {
+      base: config.revManifest.dest,
       merge: true
     }))
-    .pipe(gulp.dest(config.destBase));
+    .pipe(gulp.dest(config.revManifest.dest));
 }
 
-function jsScriptsProdTask(done) {
-  concatAndUglifyScript(config.js.main);
-  concatAndUglifyScript(config.js.inside);
-  done();
-}
-
-exports['js-scripts-prod'] = jsScriptsProdTask;
+/**
+ * the two tasks were run in series because
+ * there was a conflict when writing to
+ * rev-manifest.json file
+ */
+gulp.task('build:js-scripts', gulp.series(
+  concatAndUglifyScript(config.js.main),
+  concatAndUglifyScript(config.js.inside)
+));
 
 
 /*======= modules =======*/
 
-function mjsScriptsTask() {
+gulp.task('mjs-scripts', function() {
   return gulp.src(config.mjs.src)
     .pipe(replace('//<<-!->>', ''))
     .pipe(replace('//<<-!->>', ''))
@@ -165,10 +162,13 @@ function mjsScriptsTask() {
       extname: '.mjs'
     }))
     .pipe(gulp.dest(config.mjs.dest));
-}
-exports['mjs-scripts'] = mjsScriptsTask;
+});
 
-function mjsScriptsProdTask() {
+/**
+ * task to build modules scripts with .mjs extension
+ * instead of .js extension to be used as modules
+ */
+function mjsScriptsBuildTask() {
   return gulp.src(config.mjs.src)
     /*
       since we are creating both .js (bundles)
@@ -187,10 +187,11 @@ function mjsScriptsProdTask() {
     .pipe(rev())
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(config.mjs.dest))
-    .pipe(rev.manifest({
+    .pipe(rev.manifest(config.revManifest.path, {
+      base: config.revManifest.dest,
       merge: true
     }))
-    .pipe(gulp.dest(config.destBase));
+    .pipe(gulp.dest(config.revManifest.dest));
 }
 
 /**
@@ -204,13 +205,13 @@ function mjsScriptsProdTask() {
  * with it's fingerprinted counterpart in the rev-manifest.json
  */
 function revReplaceTask() {
-  const revManifest = getRevManifestObj(`${config.destBase}/rev-manifest.json`, config.destBase);
+  // const revManifest = getRevManifestObj(`${config.destBase}/rev-manifest.json`, config.destBase);
+  const revManifest = JSON.parse(fs.readFileSync(config.revManifest.path, 'utf8'));
 
   return gulp.src(`${config.mjs.dest}/**/*.mjs`)
     .pipe(each((content, file, callback) => {
       let newContent = content;
       for(const key of Object.keys(revManifest)) {
-        console.log(newContent.indexOf(key));
         newContent = newContent.replace(key, revManifest[key]);
       }
       callback(null, newContent);
@@ -218,23 +219,30 @@ function revReplaceTask() {
     .pipe(gulp.dest(config.mjs.dest));
 }
 
-exports['mjs-scripts-prod'] = gulp.series(jsScriptsProdTask, revReplaceTask);
+/**
+ * we run the tasks in series because revReplace
+ * task depends on the existence of the built files
+ */
+gulp.task('build:mjs-scripts', gulp.series(mjsScriptsBuildTask, revReplaceTask));
 
 /*======= service worker =======*/
 
-function copySWTask() {
+
+gulp.task('sw-rev', function () {
   return gulp.src(config.sw.src)
     .pipe(gulp.dest(config.sw.dest));
-}
+});
 
-exports['sw-script'] = copySWTask;
+/*======= scripts =======*/
 
-/*======= Both =======*/
+gulp.task('scripts', gulp.parallel('js-scripts', 'mjs-scripts'));
 
-exports['scripts'] = gulp.parallel(jsScriptsTask, mjsScriptsTask);
-
-exports['scripts-prod'] = gulp.parallel(jsScriptsProdTask, mjsScriptsProdTask);
-
+/**
+ * we run the tasks in series so that
+ * there won't be any conflicts when
+ * writing to rev-manifest.json
+ */
+gulp.task('build:scripts', gulp.parallel('build:js-scripts', 'build:mjs-scripts'));
 
 /******************
     images tasks
@@ -242,7 +250,7 @@ exports['scripts-prod'] = gulp.parallel(jsScriptsProdTask, mjsScriptsProdTask);
 
 /**
  * PS. I can honestly say that I have wasted
- * more time writing this helper than I have saved
+ * more time writing this helper than I have
  * or will ever save
  *
  * generate gulp-responsive configuration object
@@ -279,36 +287,27 @@ function getResponsiveConfig(widths, ext = 'jpg') {
 /**
  * generates images for given widths
  */
-function optImgsTask() {
+gulp.task('optimize-images', function() {
   return gulp.src(config.imgs.src)
     .pipe(responsive(
       getResponsiveConfig(config.imgs.widths)
     ))
     .pipe(gulp.dest(config.imgs.dest));
-}
-
-exports['optimize-images'] = optImgsTask;
+});
 
 /******************
     Copy tasks
 ******************/
-
-function copyImgsTask() {
-  return gulp.src(config.imgs.src)
-    .pipe(gulp.dest(config.imgs.dest));
-}
-
-exports['copy-images'] = copyImgsTask;
 
 /**
  * checks if path is directory
  * @param {string} path - path to check
  * @returns true if path is directory, else false
  */
-const isDir = (path) => {
+function isDir(path) {
   const stats = fs.statSync(path);
   return stats && stats.isDirectory();
-};
+}
 
 /**
  * looks up all files in directory recursively
@@ -317,7 +316,7 @@ const isDir = (path) => {
  * @param {Array} filelist - array to append
  * @returns array of files
  */
-const walkSync = (dir, filelist = []) => {
+function walkSync(dir, filelist = []) {
   const files = fs.readdirSync(dir);
   files.forEach( file => {
     if (isDir(`${dir}/${file}`)) {
@@ -328,30 +327,30 @@ const walkSync = (dir, filelist = []) => {
     }
   });
   return filelist;
-};
+}
 
 /**
  * creates an object where keys are the
  * same as values, from a given array
  * @param give
  */
-const arrToObj = (arr = []) => {
+function arrToObj(arr = []) {
   const obj = {};
   for(const elem of arr) {
     obj[elem] = elem;
   }
   return obj;
-};
+}
 
 /**
  * looks up rev-manifest.json of the gulp-rev module
  * if it exists, it parses it and returns the object
- * if not it gets all file names and returns a version
- * line rev-manifest that that works as a fallback
+ * if not, it gets all generated file names and returns
+ * a version rev-manifest that works as a fallback
  * @param {string} path - path to rev-manifest.json
  * @param {string}
  */
-const getRevManifestObj = (path, dirPath) => {
+function getRevManifestObj(path, dirPath) {
   // read in our manifest file
   let revManifest = {};
   try {
@@ -359,17 +358,17 @@ const getRevManifestObj = (path, dirPath) => {
   } catch (err) {
     if(!dirPath) {
       throw new Error('manifest.json doesn\'t exist,\
-      you must specify directory Path for fallback');
+      you must specify directory Path for fallbacks');
     }
     /* if rev-manifest.json doesn't exist */
     revManifest = arrToObj(walkSync(dirPath));
-    fs.writeFile(path, JSON.stringify(revManifest), 'utf8');
+    fs.writeFileSync(path, JSON.stringify(revManifest), 'utf8');
   }
   return revManifest;
-};
+}
 
-function compileHTML() {
-  const revManifest = getRevManifestObj(`${config.destBase}/rev-manifest.json`, config.destBase);
+gulp.task('compile-html', function() {
+  const revManifest = getRevManifestObj(config.revManifest.path, config.destBase);
 
   /* read in our handlebars template,
     compile it using our manifest, and output */
@@ -387,25 +386,21 @@ function compileHTML() {
       extname: '.html'
     }))
     .pipe(gulp.dest(config.hbs.dest));
-}
+});
 
-exports['compile-html'] = compileHTML;
-
-function copyDataTask() {
+gulp.task('copy-data', function() {
   return gulp.src(config.data.src)
     .pipe(gulp.dest(config.data.dest));
-}
-
-exports['copy-data'] = copyDataTask;
-
+});
 
 /******************
     dev task
 ******************/
 
-function devTask(done) {
-  gulp.watch(config.styles.src, stylesTask);
-  gulp.watch(config.lint.src, lintTask);
+gulp.task('live-editing', function (done) {
+  gulp.watch(config.styles.src, gulp.parallel('styles'));
+  gulp.watch(config.lint.src, gulp.parallel('lint'));
+  gulp.watch('src/js/**/*.js', gulp.parallel('scripts'));
   // listening for changes in the html file
   // and reloading browserSync on changes
   gulp.watch(config.hbs.src)
@@ -417,9 +412,7 @@ function devTask(done) {
     }
   });
   done();
-}
-
-exports.dev = devTask;
+});
 
 /******************
     prod task
@@ -435,18 +428,15 @@ exports.build = gulp.series(
     rimraf(config.destBase, cb);
   },
   gulp.parallel(
-    optImgsTask,
-    stylesProdTask,
-    copyDataTask,
     // the reason why these tasks are in series
     // because we shouldn't do one before the other
     // if we have a syntax error we want to be notified
-    gulp.series(
-      lintTask,
-      gulp.parallel(jsScriptsProdTask, mjsScriptsProdTask)
-    )
+    gulp.series('lint', 'build:scripts'),
+    'optimize-images',
+    'build:styles',
+    'copy-data',
   ),
-  compileHTML
+  'compile-html'
 );
 
 /******************
@@ -459,14 +449,14 @@ exports.default = gulp.series(
     rimraf(config.destBase, cb);
   },
   gulp.parallel(
-    optImgsTask,
-    stylesTask,
-    copyDataTask,
+    'optimize-images',
+    'styles',
+    'copy-data',
     gulp.series(
-      lintTask,
-      gulp.parallel(jsScriptsTask, mjsScriptsTask)
+      'lint',
+      'scripts'
     )
   ),
-  compileHTML,
-  devTask
+  'compile-html',
+  'live-editing'
 );
