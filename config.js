@@ -4,10 +4,11 @@
  * of that path when we we need to
  */
 module.exports = {
-  destBase: 'app',
+  destBase: 'app/',
   styles: {
     src: 'src/css/**/*.css',
-    dest: 'app/assets/css'
+    dest: 'app/assets/css',
+    revDest: 'assets/css'
   },
   js: {
     main: {
@@ -17,6 +18,7 @@ module.exports = {
         '!node_modules/**'
       ],
       dest: 'app/assets/js/bundles',
+      revDest: 'assets/js/bundles',
       fileName: 'main.js'
     },
     inside: {
@@ -26,12 +28,14 @@ module.exports = {
         '!node_modules/**'
       ],
       dest: 'app/assets/js/bundles',
+      revDest: 'assets/js/bundles',
       fileName: 'inside.js'
     }
   },
   mjs: {
     src: ['src/js/**/*.js', '!src/js/sw.js' ,'!node_modules/**'],
-    dest: 'app/assets/js/modules'
+    dest: 'app/assets/js/modules',
+    revDest: 'assets/js/modules'
   },
   sw: {
     src: 'src/js/sw.js',
@@ -48,6 +52,7 @@ module.exports = {
   imgs: {
     src: ['src/img/**', '!src/img/offline.png'],
     dest: 'app/assets/img',
+    revDest: 'assets/img',
     // widths to generate images
     // if src_image_width > generated_img_width
     // set object with value=width
@@ -67,7 +72,7 @@ module.exports = {
     dest: 'app/assets/data'
   },
   revManifest: {
-    dest: 'app/assets/',
-    path: 'app/assets/rev-manifest.json'
+    dest: 'app/',
+    path: 'app/rev-manifest.json'
   }
 };

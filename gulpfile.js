@@ -32,6 +32,7 @@ const browserSync = require('browser-sync').create();
 const handlebars = require('gulp-compile-handlebars');
 /*=========== internal ===========*/
 const fs = require('fs');
+const path = require('path');
 // config contains all file build paths, image sizes and all
 const config = require('./config');
 
@@ -68,6 +69,9 @@ gulp.task('build:styles', function () {
     .pipe(rev())
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(config.styles.dest))
+    .pipe(rename({
+      dirname: config.styles.revDest
+    }))
     .pipe(rev.manifest(config.revManifest.path, {
       base: config.revManifest.dest,
       merge: true
@@ -134,6 +138,9 @@ function concatAndUglifyScript(details) {
     .pipe(rev())
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(details.dest))
+    .pipe(rename({
+      dirname: details.revDest
+    }))
     .pipe(rev.manifest(config.revManifest.path, {
       base: config.revManifest.dest,
       merge: true
@@ -187,6 +194,9 @@ function mjsScriptsBuildTask() {
     .pipe(rev())
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(config.mjs.dest))
+    .pipe(rename({
+      dirname: config.mjs.revDest
+    }))
     .pipe(rev.manifest(config.revManifest.path, {
       base: config.revManifest.dest,
       merge: true
@@ -205,7 +215,6 @@ function mjsScriptsBuildTask() {
  * with it's fingerprinted counterpart in the rev-manifest.json
  */
 function revReplaceTask() {
-  // const revManifest = getRevManifestObj(`${config.destBase}/rev-manifest.json`, config.destBase);
   const revManifest = JSON.parse(fs.readFileSync(config.revManifest.path, 'utf8'));
 
   return gulp.src(`${config.mjs.dest}/**/*.mjs`)
@@ -300,47 +309,38 @@ gulp.task('optimize-images', function() {
 ******************/
 
 /**
- * checks if path is directory
- * @param {string} path - path to check
- * @returns true if path is directory, else false
- */
-function isDir(path) {
-  const stats = fs.statSync(path);
-  return stats && stats.isDirectory();
-}
-
-/**
  * looks up all files in directory recursively
  * (i.e. and all its subdirectories)
- * @param {String} dir - directory path
+ * @param {string} base - base path that won't be include in file paths
+ * @param {String} dir - directory path to include in file paths
  * @param {Array} filelist - array to append
- * @returns array of files
+ * @returns array of file paths
  */
-function walkSync(dir, filelist = []) {
-  const files = fs.readdirSync(dir);
+const walkSync = (base, dir, filelist = []) => {
+  const files = fs.readdirSync(path.join(base, dir));
   files.forEach( file => {
-    if (isDir(`${dir}/${file}`)) {
-      filelist = walkSync(`${dir}/${file}/`, filelist);
-    }
-    else {
-      filelist.push(file);
+    const filePath = path.join(dir, file);
+    if (fs.statSync(path.join(base, filePath)).isDirectory()) {
+      filelist = walkSync(base, filePath, filelist);
+    } else {
+      filelist.push(filePath);
     }
   });
   return filelist;
-}
+};
 
 /**
  * creates an object where keys are the
  * same as values, from a given array
  * @param give
  */
-function arrToObj(arr = []) {
+const arrToObj = (arr = []) => {
   const obj = {};
   for(const elem of arr) {
     obj[elem] = elem;
   }
   return obj;
-}
+};
 
 /**
  * looks up rev-manifest.json of the gulp-rev module
@@ -350,25 +350,25 @@ function arrToObj(arr = []) {
  * @param {string} path - path to rev-manifest.json
  * @param {string}
  */
-function getRevManifestObj(path, dirPath) {
+function getRevManifestObj(path, base, dir) {
   // read in our manifest file
   let revManifest = {};
   try {
     revManifest = JSON.parse(fs.readFileSync(path, 'utf8'));
   } catch (err) {
-    if(!dirPath) {
+    if(!base || !dir) {
       throw new Error('manifest.json doesn\'t exist,\
       you must specify directory Path for fallbacks');
     }
     /* if rev-manifest.json doesn't exist */
-    revManifest = arrToObj(walkSync(dirPath));
-    fs.writeFileSync(path, JSON.stringify(revManifest), 'utf8');
+    revManifest = arrToObj(walkSync(base, dir));
+    fs.writeFileSync(path, JSON.stringify(revManifest, null, 2), 'utf8');
   }
   return revManifest;
 }
 
 gulp.task('compile-html', function() {
-  const revManifest = getRevManifestObj(config.revManifest.path, config.destBase);
+  const revManifest = getRevManifestObj(config.revManifest.path, config.destBase, 'assets/');
 
   /* read in our handlebars template,
     compile it using our manifest, and output */
