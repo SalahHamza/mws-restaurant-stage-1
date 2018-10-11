@@ -17,8 +17,6 @@ module.exports = {
         'src/js/main.js',
         '!node_modules/**'
       ],
-      dest: 'app/assets/js/bundles',
-      revDest: 'assets/js/bundles',
       fileName: 'main.js'
     },
     inside: {
@@ -27,10 +25,10 @@ module.exports = {
         'src/js/restaurant_info.js',
         '!node_modules/**'
       ],
-      dest: 'app/assets/js/bundles',
-      revDest: 'assets/js/bundles',
       fileName: 'inside.js'
-    }
+    },
+    dest: 'app/assets/js/bundles',
+    revDest: 'assets/js/bundles',
   },
   mjs: {
     src: ['src/js/**/*.js', '!src/js/sw.js' ,'!node_modules/**'],
@@ -39,11 +37,11 @@ module.exports = {
   },
   sw: {
     src: 'src/js/sw.js',
-    dest: 'app/'
+    dest: 'app'
   },
-  hbs: {
-    src: 'src/templates/*.hbs',
-    dest: 'app/'
+  html: {
+    src: 'src/templates/*.html',
+    dest: 'app'
   },
   lint: {
     // linting files with both .js and .mjs extensions
