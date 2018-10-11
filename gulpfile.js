@@ -66,8 +66,8 @@ gulp.task('build:styles', function () {
       })
     )
     .pipe(cleanCSS())
-    .pipe(rev())
     .pipe(sourcemaps.write('.'))
+    .pipe(rev())
     .pipe(gulp.dest(config.styles.dest))
     .pipe(rename({
       dirname: config.styles.revDest
@@ -135,8 +135,8 @@ function concatAndUglifyScript(details) {
     }))
     .pipe(concat({path: details.fileName, cwd: ''}))
     .pipe(uglify())
-    .pipe(rev())
     .pipe(sourcemaps.write('.'))
+    .pipe(rev())
     .pipe(gulp.dest(details.dest))
     .pipe(rename({
       dirname: details.revDest
@@ -191,8 +191,8 @@ function mjsScriptsBuildTask() {
     }))
     .pipe(sourcemaps.init())
     .pipe(uglify())
-    .pipe(rev())
     .pipe(sourcemaps.write('.'))
+    .pipe(rev())
     .pipe(gulp.dest(config.mjs.dest))
     .pipe(rename({
       dirname: config.mjs.revDest
