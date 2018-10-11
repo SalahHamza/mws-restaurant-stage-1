@@ -1,4 +1,4 @@
-//<<-!->>import DBHelper from '/assets/js/modules/dbhelper.mjs';
+//<<-!->>import DBHelper from './dbhelper.mjs';
 
 class MainPage {
   constructor() {
