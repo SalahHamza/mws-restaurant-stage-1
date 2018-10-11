@@ -4,8 +4,6 @@ const gulp = require('gulp');
 const rev = require('gulp-rev');
 // used to delete folders and files
 const rimraf = require('rimraf');
-// used to loop over files specified in gulp.src
-const each = require('gulp-each');
 // used to convert files to es5
 const babel = require('gulp-babel');
 // used to lint code for syntax errors
@@ -22,25 +20,26 @@ const cleanCSS = require('gulp-clean-css');
 const sourcemaps = require('gulp-sourcemaps');
 // used to generate/optimize images
 const responsive = require('gulp-responsive');
+// used to replace filename occurences with their fingerprinted counterparts
+const revRewrite = require('gulp-rev-rewrite');
 // used to minify .js files (compatible with es6)
 const uglify = require('gulp-uglify-es').default;
 // used to autoprefix css
 const autoprefixer = require('gulp-autoprefixer');
+// used to delete original file after revision (adding fingerprint)
+const revDelete = require('gulp-rev-delete-original');
 // used to do live editing in the browser
 const browserSync = require('browser-sync').create();
-// used to compile .hbs files to .html
-const handlebars = require('gulp-compile-handlebars');
 /*=========== internal ===========*/
-const fs = require('fs');
-const path = require('path');
 // config contains all file build paths, image sizes and all
 const config = require('./config');
+
 
 /******************
     Styles tasks
 ******************/
 
-gulp.task('styles', function() {
+gulp.task('styles', () => {
   return gulp.src(config.styles.src)
     .pipe(
       autoprefixer({
@@ -56,7 +55,7 @@ gulp.task('styles', function() {
     .pipe(browserSync.stream());
 });
 
-gulp.task('build:styles', function () {
+gulp.task('build:styles', () => {
   return gulp.src(config.styles.src)
     .pipe(sourcemaps.init())
     // auto prefexing
@@ -67,16 +66,7 @@ gulp.task('build:styles', function () {
     )
     .pipe(cleanCSS())
     .pipe(sourcemaps.write('.'))
-    .pipe(rev())
-    .pipe(gulp.dest(config.styles.dest))
-    .pipe(rename({
-      dirname: config.styles.revDest
-    }))
-    .pipe(rev.manifest(config.revManifest.path, {
-      base: config.revManifest.dest,
-      merge: true
-    }))
-    .pipe(gulp.dest(config.revManifest.dest));
+    .pipe(gulp.dest(config.styles.dest));
 });
 
 
@@ -85,7 +75,7 @@ gulp.task('build:styles', function () {
     Linting tasks
 ******************/
 
-gulp.task('lint', function() {
+gulp.task('lint', () => {
   return gulp.src(config.lint.src)
     // eslint() attaches the lint output to the 'eslint' property
     // of the file object so it can be used by other modules.
@@ -107,7 +97,7 @@ gulp.task('lint', function() {
 /**
  * concat scripts and transpile to es5
  */
-function concatScript(details) {
+const concatScript = (details, dest) => {
   return () => gulp.src(details.src)
     .pipe(sourcemaps.init())
     .pipe(babel({
@@ -115,19 +105,19 @@ function concatScript(details) {
     }))
     .pipe(concat(details.fileName))
     .pipe(sourcemaps.write())
-    .pipe(gulp.dest(details.dest));
-}
+    .pipe(gulp.dest(dest));
+};
 
 gulp.task('js-scripts', gulp.parallel(
-  concatScript(config.js.main),
-  concatScript(config.js.inside)
+  concatScript(config.js.main, config.js.dest),
+  concatScript(config.js.inside, config.js.dest)
 ));
 
 
 /**
  * concat, uglify and transpile (to es5) scripts
  */
-function concatAndUglifyScript(details) {
+const concatAndUglifyScript = (details, dest) => {
   return () => gulp.src(details.src)
     .pipe(sourcemaps.init())
     .pipe(babel({
@@ -136,17 +126,9 @@ function concatAndUglifyScript(details) {
     .pipe(concat({path: details.fileName, cwd: ''}))
     .pipe(uglify())
     .pipe(sourcemaps.write('.'))
-    .pipe(rev())
-    .pipe(gulp.dest(details.dest))
-    .pipe(rename({
-      dirname: details.revDest
-    }))
-    .pipe(rev.manifest(config.revManifest.path, {
-      base: config.revManifest.dest,
-      merge: true
-    }))
-    .pipe(gulp.dest(config.revManifest.dest));
-}
+    // .pipe(rev())
+    .pipe(gulp.dest(dest));
+};
 
 /**
  * the two tasks were run in series because
@@ -154,14 +136,14 @@ function concatAndUglifyScript(details) {
  * rev-manifest.json file
  */
 gulp.task('build:js-scripts', gulp.series(
-  concatAndUglifyScript(config.js.main),
-  concatAndUglifyScript(config.js.inside)
+  concatAndUglifyScript(config.js.main, config.js.dest),
+  concatAndUglifyScript(config.js.inside, config.js.dest)
 ));
 
 
 /*======= modules =======*/
 
-gulp.task('mjs-scripts', function() {
+gulp.task('mjs-scripts', () => {
   return gulp.src(config.mjs.src)
     .pipe(replace('//<<-!->>', ''))
     .pipe(replace('//<<-!->>', ''))
@@ -175,7 +157,8 @@ gulp.task('mjs-scripts', function() {
  * task to build modules scripts with .mjs extension
  * instead of .js extension to be used as modules
  */
-function mjsScriptsBuildTask() {
+
+gulp.task('build:mjs-scripts', () => {
   return gulp.src(config.mjs.src)
     /*
       since we are creating both .js (bundles)
@@ -186,58 +169,29 @@ function mjsScriptsBuildTask() {
     */
     .pipe(replace('//<<-!->>', ''))
     .pipe(replace('//<<-!->>', ''))
-    .pipe(rename({
-      extname: '.mjs'
-    }))
     .pipe(sourcemaps.init())
     .pipe(uglify())
-    .pipe(sourcemaps.write('.'))
-    .pipe(rev())
-    .pipe(gulp.dest(config.mjs.dest))
-    .pipe(rename({
-      dirname: config.mjs.revDest
-    }))
-    .pipe(rev.manifest(config.revManifest.path, {
-      base: config.revManifest.dest,
-      merge: true
-    }))
-    .pipe(gulp.dest(config.revManifest.dest));
-}
-
-/**
- * Replaces occurences of files in the import statement
- * with fingerprinted (versioned) file name.
- * Details:
- * as there is no plugin related to gulp-rev that
- * takes care of replacing file names in scripts
- * this task uses gulp-each to loop through files
- * and changes the accurences of the file name
- * with it's fingerprinted counterpart in the rev-manifest.json
- */
-function revReplaceTask() {
-  const revManifest = JSON.parse(fs.readFileSync(config.revManifest.path, 'utf8'));
-
-  return gulp.src(`${config.mjs.dest}/**/*.mjs`)
-    .pipe(each((content, file, callback) => {
-      let newContent = content;
-      for(const key of Object.keys(revManifest)) {
-        newContent = newContent.replace(key, revManifest[key]);
+    .pipe(sourcemaps.write('.', {
+      mapFile(mapFilePath) {
+        // source map files are named *.mjs.map instead of *.js.map
+        return mapFilePath.replace('.js.map', '.mjs.map');
+      },
+      sourceMappingURL(file) {
+        return file.relative.replace('.js', '.mjs') + '.map';
       }
-      callback(null, newContent);
+    }))
+    .pipe(rename( filePath => {
+      if(filePath.extname === '.js') {
+        filePath.extname = '.mjs';
+      }
     }))
     .pipe(gulp.dest(config.mjs.dest));
-}
-
-/**
- * we run the tasks in series because revReplace
- * task depends on the existence of the built files
- */
-gulp.task('build:mjs-scripts', gulp.series(mjsScriptsBuildTask, revReplaceTask));
+});
 
 /*======= service worker =======*/
 
 
-gulp.task('sw-rev', function () {
+gulp.task('sw-rev', () => {
   return gulp.src(config.sw.src)
     .pipe(gulp.dest(config.sw.dest));
 });
@@ -270,7 +224,7 @@ gulp.task('build:scripts', gulp.parallel('build:js-scripts', 'build:mjs-scripts'
  * check: http://sharp.dimens.io/en/stable/api-resize/#withoutenlargement
  * @param {string} ext - extension to generate this for, defaults to 'jpg'
  */
-function getResponsiveConfig(widths, ext = 'jpg') {
+const getResponsiveConfig = (widths, ext = 'jpg') => {
   const arr = [];
   for(const width of widths) {
     let w, enlarge = false;
@@ -291,12 +245,12 @@ function getResponsiveConfig(widths, ext = 'jpg') {
     });
   }
   return {[`*.${ext}`]: arr};
-}
+};
 
 /**
  * generates images for given widths
  */
-gulp.task('optimize-images', function() {
+gulp.task('optimize-images', () => {
   return gulp.src(config.imgs.src)
     .pipe(responsive(
       getResponsiveConfig(config.imgs.widths)
@@ -308,102 +262,102 @@ gulp.task('optimize-images', function() {
     Copy tasks
 ******************/
 
-/**
- * looks up all files in directory recursively
- * (i.e. and all its subdirectories)
- * @param {string} base - base path that won't be include in file paths
- * @param {String} dir - directory path to include in file paths
- * @param {Array} filelist - array to append
- * @returns array of file paths
- */
-const walkSync = (base, dir, filelist = []) => {
-  const files = fs.readdirSync(path.join(base, dir));
-  files.forEach( file => {
-    const filePath = path.join(dir, file);
-    if (fs.statSync(path.join(base, filePath)).isDirectory()) {
-      filelist = walkSync(base, filePath, filelist);
-    } else {
-      filelist.push(filePath);
-    }
-  });
-  return filelist;
-};
-
-/**
- * creates an object where keys are the
- * same as values, from a given array
- * @param give
- */
-const arrToObj = (arr = []) => {
-  const obj = {};
-  for(const elem of arr) {
-    obj[elem] = elem;
-  }
-  return obj;
-};
-
-/**
- * looks up rev-manifest.json of the gulp-rev module
- * if it exists, it parses it and returns the object
- * if not, it gets all generated file names and returns
- * a version rev-manifest that works as a fallback
- * @param {string} path - path to rev-manifest.json
- * @param {string}
- */
-function getRevManifestObj(path, base, dir) {
-  // read in our manifest file
-  let revManifest = {};
-  try {
-    revManifest = JSON.parse(fs.readFileSync(path, 'utf8'));
-  } catch (err) {
-    if(!base || !dir) {
-      throw new Error('manifest.json doesn\'t exist,\
-      you must specify directory Path for fallbacks');
-    }
-    /* if rev-manifest.json doesn't exist */
-    revManifest = arrToObj(walkSync(base, dir));
-    fs.writeFileSync(path, JSON.stringify(revManifest, null, 2), 'utf8');
-  }
-  return revManifest;
-}
-
-gulp.task('compile-html', function() {
-  const revManifest = getRevManifestObj(config.revManifest.path, config.destBase, 'assets/');
-
-  /* read in our handlebars template,
-    compile it using our manifest, and output */
-  return gulp.src(config.hbs.src)
-    .pipe(handlebars(revManifest, {
-      /* create a handlebars helper to look up
-      fingerprinted asset by non-fingerprinted name */
-      helpers: {
-        assetPath(path, context) {
-          return context.data.root[path];
-        }
-      }
-    }))
-    .pipe(rename({
-      extname: '.html'
-    }))
-    .pipe(gulp.dest(config.hbs.dest));
-});
-
-gulp.task('copy-data', function() {
+gulp.task('copy-data', () => {
   return gulp.src(config.data.src)
     .pipe(gulp.dest(config.data.dest));
 });
+
+gulp.task('copy-html', () => {
+  return gulp.src(config.html.src)
+    .pipe(gulp.dest(config.html.dest));
+});
+
+const revisionTasks = globs => {
+  return globs.map( glob => () => {
+    console.log('revision');
+    return gulp.src(`${glob.opt.dest}/*.${glob.ext}?(.map)`)
+      .pipe(rev())
+      .pipe(revDelete()) // Remove the unrevved files
+      .pipe(gulp.dest(glob.opt.dest))
+      .pipe(rename({
+        dirname: glob.opt.revDest
+      }))
+      .pipe(rev.manifest(config.revManifest.path, {
+        base: config.revManifest.dest,
+        merge: true
+      }))
+      .pipe(gulp.dest(config.destBase));
+  });
+};
+
+gulp.task('revision', gulp.series(
+  gulp.parallel('build:styles', 'build:scripts'),
+  gulp.parallel(...revisionTasks([
+    {opt: config.mjs, ext: 'mjs'},
+    {opt: config.js, ext: 'js'},
+    {opt: config.styles, ext: 'css'}
+  ]))
+));
+
+/**
+ * since Source Mapping URL is relative
+ * we only keep the filename. e.g.
+ * return 'styles.css.map' instead of 'assets/css/styles.css.map'
+ * =======================================================
+ * also, for modules the import statement must either have a
+ * absolute '/assets/.../*.mjs' or relative './*.mjs' paths,
+ * in this case relative, so we return './*.mjs'
+ */
+const replacePath = (filename, vynil) => {
+  if (filename.endsWith('.map')) {
+    return filename.slice(filename.lastIndexOf('/')+1);
+  }
+  if((filename.endsWith('.mjs') && vynil.path.endsWith('.mjs'))) {
+    return './' + filename.slice(filename.lastIndexOf('/')+1);
+  }
+  return filename;
+};
+
+
+/**
+ * Replaces occurences of file paths with their
+ * fingerprinted counterparts from the rev-manifest.json.
+ */
+const revReplaceTasks = globs => {
+  return globs.map( glob => () => {
+    const manifest = gulp.src(config.revManifest.path);
+    return gulp.src(`${glob.dest}/*.${glob.ext}?(.map)`)
+      .pipe(revRewrite({
+        replaceInExtensions: ['.js', '.css', '.html', '.mjs'],
+        manifest: manifest,
+        modifyUnreved: replacePath,
+        modifyReved: replacePath
+      }))
+      .pipe(gulp.dest(glob.dest));
+  });
+};
+
+gulp.task('rev-rewrite', gulp.series(
+  'revision',
+  gulp.parallel(...revReplaceTasks([
+    {dest: config.html.dest, ext: 'html'},
+    {dest: config.styles.dest, ext: 'css'},
+    {dest: config.js.dest, ext: 'js'},
+    {dest: config.mjs.dest, ext: 'mjs'}
+  ]))
+));
 
 /******************
     dev task
 ******************/
 
-gulp.task('live-editing', function (done) {
+gulp.task('live-editing', done => {
   gulp.watch(config.styles.src, gulp.parallel('styles'));
   gulp.watch(config.lint.src, gulp.parallel('lint'));
   gulp.watch('src/js/**/*.js', gulp.parallel('scripts'));
   // listening for changes in the html file
   // and reloading browserSync on changes
-  gulp.watch(config.hbs.src)
+  gulp.watch(config.html.src)
     .on('change', browserSync.reload);
 
   browserSync.init({
@@ -423,40 +377,39 @@ gulp.task('live-editing', function (done) {
  * for the exception of the linting task
  * that runs before the scripts task
  */
-exports.build = gulp.series(
-  function (cb) {
+gulp.task('build', gulp.series(
+  cb => {
     rimraf(config.destBase, cb);
   },
   gulp.parallel(
+    'copy-html',
     // the reason why these tasks are in series
     // because we shouldn't do one before the other
     // if we have a syntax error we want to be notified
-    gulp.series('lint', 'build:scripts'),
+    gulp.series('lint', 'rev-rewrite'),
     'optimize-images',
-    'build:styles',
-    'copy-data',
-  ),
-  'compile-html'
-);
+    'copy-data'
+  )
+));
 
 /******************
     default task
 ******************/
 
 
-exports.default = gulp.series(
-  function (cb) {
-    rimraf(config.destBase, cb);
-  },
-  gulp.parallel(
-    'optimize-images',
-    'styles',
-    'copy-data',
-    gulp.series(
-      'lint',
-      'scripts'
-    )
-  ),
-  'compile-html',
-  'live-editing'
-);
+// exports.default = gulp.series(
+//   function (cb) {
+//     rimraf(config.destBase, cb);
+//   },
+//   gulp.parallel(
+//     'optimize-images',
+//     'styles',
+//     'copy-data',
+//     gulp.series(
+//       'lint',
+//       'revision'
+//     )
+//   ),
+//   'compile-html',
+//   'live-editing'
+// );
