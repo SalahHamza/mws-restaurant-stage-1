@@ -126,7 +126,6 @@ const concatAndUglifyScript = (details, dest) => {
     .pipe(concat({path: details.fileName, cwd: ''}))
     .pipe(uglify())
     .pipe(sourcemaps.write('.'))
-    // .pipe(rev())
     .pipe(gulp.dest(dest));
 };
 
@@ -200,11 +199,6 @@ gulp.task('sw-rev', () => {
 
 gulp.task('scripts', gulp.parallel('js-scripts', 'mjs-scripts'));
 
-/**
- * we run the tasks in series so that
- * there won't be any conflicts when
- * writing to rev-manifest.json
- */
 gulp.task('build:scripts', gulp.parallel('build:js-scripts', 'build:mjs-scripts'));
 
 /******************
@@ -272,6 +266,12 @@ gulp.task('copy-html', () => {
     .pipe(gulp.dest(config.html.dest));
 });
 
+
+/**
+ * add fingerprint to all files specified in globs arrays
+ * @param {Array.<Objects>} globs - array of objects with options for gulp.src and gulp.dest
+ * @returns an array of task functions
+ */
 const revisionTasks = globs => {
   return globs.map( glob => () => {
     console.log('revision');
@@ -320,8 +320,11 @@ const replacePath = (filename, vynil) => {
 
 
 /**
+ *
  * Replaces occurences of file paths with their
  * fingerprinted counterparts from the rev-manifest.json.
+ * @param {Array.<Objects>} globs - array of objects with options for gulp.src and gulp.dest
+ * @returns an array of task functions
  */
 const revReplaceTasks = globs => {
   return globs.map( glob => () => {
@@ -372,20 +375,13 @@ gulp.task('live-editing', done => {
     prod task
 ******************/
 
-/**
- * running all tasks in parallel
- * for the exception of the linting task
- * that runs before the scripts task
- */
 gulp.task('build', gulp.series(
   cb => {
     rimraf(config.destBase, cb);
   },
   gulp.parallel(
     'copy-html',
-    // the reason why these tasks are in series
-    // because we shouldn't do one before the other
-    // if we have a syntax error we want to be notified
+    // linting before running any tasks on scripts
     gulp.series('lint', 'rev-rewrite'),
     'optimize-images',
     'copy-data'
@@ -397,19 +393,19 @@ gulp.task('build', gulp.series(
 ******************/
 
 
-// exports.default = gulp.series(
-//   function (cb) {
-//     rimraf(config.destBase, cb);
-//   },
-//   gulp.parallel(
-//     'optimize-images',
-//     'styles',
-//     'copy-data',
-//     gulp.series(
-//       'lint',
-//       'revision'
-//     )
-//   ),
-//   'compile-html',
-//   'live-editing'
-// );
+exports.default = gulp.series(
+  function (cb) {
+    rimraf(config.destBase, cb);
+  },
+  gulp.parallel(
+    'copy-html',
+    'optimize-images',
+    'styles',
+    'copy-data',
+    gulp.series(
+      'lint',
+      'scripts'
+    )
+  ),
+  'live-editing'
+);
