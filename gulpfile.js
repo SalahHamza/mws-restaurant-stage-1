@@ -94,51 +94,49 @@ gulp.task('lint', () => {
 
 /*======= bundled scripts =======*/
 
-/**
- * concat scripts and transpile to es5
- */
-const concatScript = (details, dest) => {
-  return () => gulp.src(details.src)
-    .pipe(sourcemaps.init())
-    .pipe(babel({
-      presets: ['@babel/preset-env']
-    }))
-    .pipe(concat(details.fileName))
-    .pipe(sourcemaps.write())
-    .pipe(gulp.dest(dest));
+const concatScript = globs => {
+  return globs.map(glob => {
+    return () => gulp.src(glob.details.src)
+      .pipe(sourcemaps.init())
+      .pipe(babel({
+        presets: ['@babel/preset-env']
+      }))
+      .pipe(concat(glob.details.fileName))
+      .pipe(sourcemaps.write())
+      .pipe(gulp.dest(glob.dest));
+  });
 };
 
-gulp.task('js-scripts', gulp.parallel(
-  concatScript(config.js.main, config.js.dest),
-  concatScript(config.js.inside, config.js.dest)
-));
+
+gulp.task('js-scripts',
+  gulp.parallel(...concatScript([
+    {details: config.js.main, dest: config.js.dest},
+    {details: config.js.inside, dest: config.js.dest}
+  ]))
+);
 
 
-/**
- * concat, uglify and transpile (to es5) scripts
- */
-const concatAndUglifyScript = (details, dest) => {
-  return () => gulp.src(details.src)
-    .pipe(sourcemaps.init())
-    .pipe(babel({
-      presets: ['@babel/preset-env']
-    }))
-    .pipe(concat({path: details.fileName, cwd: ''}))
-    .pipe(uglify())
-    .pipe(sourcemaps.write('.'))
-    .pipe(gulp.dest(dest));
+const concatAndUglifyScript = globs => {
+  return globs.map(glob => {
+    return () => gulp.src(glob.details.src)
+      .pipe(sourcemaps.init())
+      .pipe(babel({
+        presets: ['@babel/preset-env']
+      }))
+      .pipe(concat({path: glob.details.fileName, cwd: ''}))
+      .pipe(uglify())
+      .pipe(sourcemaps.write('.'))
+      .pipe(gulp.dest(glob.dest));
+  });
+
 };
 
-/**
- * the two tasks were run in series because
- * there was a conflict when writing to
- * rev-manifest.json file
- */
-gulp.task('build:js-scripts', gulp.series(
-  concatAndUglifyScript(config.js.main, config.js.dest),
-  concatAndUglifyScript(config.js.inside, config.js.dest)
-));
-
+gulp.task('build:js-scripts',
+  gulp.parallel(...concatAndUglifyScript([
+    {details: config.js.main, dest: config.js.dest},
+    {details: config.js.inside, dest: config.js.dest}
+  ]))
+);
 
 /*======= modules =======*/
 
