@@ -1,11 +1,15 @@
 /*global __dirname process:true*/
 
-const spdy = require('spdy');
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const
+  path = require('path'),
+  yargs = require('yargs'),
+  express = require('express'),
+  compression = require('compression');
 
 const app = express();
+// enabling text based responses compression
+app.use(compression());
+
 
 // setting views engine
 app.set('views', path.join(__dirname, '../app'));
@@ -17,22 +21,29 @@ app.set('view engine', 'html');
  */
 app.use(require('./routes'));
 
-/**********************************
-            spdy setup
-**********************************/
-const spdyOptions = {
-  key: fs.readFileSync(path.join(__dirname, '/../server.key')),
-  cert:  fs.readFileSync(path.join(__dirname, '/../server.crt'))
-};
-
-const server = spdy.createServer(spdyOptions, app);
-
-server.listen(process.env.PORT || 3000, (error) => {
-  if (error) {
-    console.error(error);
-    return process.exit(1);
+const argv = yargs.options({
+  'port': {
+    describe: 'server port',
+    default: 3000,
+    type: 'number'
+  },
+  'protocol': {
+    describe: 'protocol to serve with',
+    default: 'h1',
+    type: 'string'
   }
-  console.log(`Listening on port ${server.address().port}`);
-});
+}).argv;
 
-// based on: https://webapplog.com/http2-node/
+console.log(argv);
+
+if(argv.protocol === 'h2') {
+  require('./http2_server')(app, argv.port);
+} else {
+  const server = app.listen(argv.port, (err) => {
+    if(err) {
+      console.error(err);
+      return process.exit(1);
+    }
+    console.log(`Listening on port ${server.address().port}`);
+  });
+}

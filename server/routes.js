@@ -1,14 +1,11 @@
 /*global __dirname :true*/
 
-const compression = require('compression');
-const path = require('path');
-const fs = require('fs');
+const
+  fs = require('fs'),
+  path = require('path');
 
 const express = require('express');
 const router = express.Router();
-
-// enabling text based responses compression
-router.use(compression());
 
 /*
  In order to have a good cache policy, maxAge of 1year has been
