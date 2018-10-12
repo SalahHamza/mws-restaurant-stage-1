@@ -1,7 +1,7 @@
 // the version will be replaced in the build step
 const version = '<<-!version->>';
 const staticCacheName  = `reviews-app--static-${version}`;
-const mapCacheName = `reviews-app--mapAPI-${version}`;
+const mapCacheName = 'reviews-app--mapAPI';
 const allCaches = [
   staticCacheName,
   mapCacheName
@@ -123,7 +123,6 @@ function fetchAndCacheThenRespond(request, cacheName) {
     return cache.match(request).then( response => {
       /* fetching resources from network */
       const fetchPromise = fetch(request).then( networkResponse => {
-        console.log(networkResponse.clone());
         cache.put(request, networkResponse.clone());
         return networkResponse;
       });
