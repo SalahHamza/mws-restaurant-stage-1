@@ -33,6 +33,7 @@ const browserSync = require('browser-sync').create();
 /*=========== internal ===========*/
 // config contains all file build paths, image sizes and all
 const config = require('./config');
+const pkg = require('./package.json');
 
 
 /******************
@@ -190,6 +191,7 @@ gulp.task('build:mjs-scripts', () => {
 
 gulp.task('sw-rev', () => {
   return gulp.src(config.sw.src)
+    .pipe(replace('<<-!version->>', pkg.version))
     .pipe(gulp.dest(config.sw.dest));
 });
 
@@ -381,6 +383,7 @@ gulp.task('build', gulp.series(
     'copy-html',
     // linting before running any tasks on scripts
     gulp.series('lint', 'rev-rewrite'),
+    'sw-rev',
     'optimize-images',
     'copy-data'
   )
@@ -389,7 +392,6 @@ gulp.task('build', gulp.series(
 /******************
     default task
 ******************/
-
 
 exports.default = gulp.series(
   function (cb) {
