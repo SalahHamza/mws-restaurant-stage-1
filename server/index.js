@@ -34,8 +34,6 @@ const argv = yargs.options({
   }
 }).argv;
 
-console.log(argv);
-
 if(argv.protocol === 'h2') {
   require('./http2_server')(app, argv.port);
 } else {
