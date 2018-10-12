@@ -252,6 +252,11 @@ gulp.task('optimize-images', () => {
     .pipe(gulp.dest(config.imgs.dest));
 });
 
+gulp.task('copy-images', () => {
+  return gulp.src(config.imgs.offline.src)
+    .pipe(gulp.dest(config.imgs.offline.dest));
+});
+
 /******************
     Copy tasks
 ******************/
