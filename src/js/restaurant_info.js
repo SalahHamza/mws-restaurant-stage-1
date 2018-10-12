@@ -1,5 +1,7 @@
 //<<-!->>import DBHelper from './dbhelper.mjs';
 
+DBHelper.registerServiceWorker();
+
 class RestaurantInfo {
 
   /**
