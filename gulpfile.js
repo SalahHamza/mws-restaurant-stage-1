@@ -257,6 +257,8 @@ gulp.task('copy-images', () => {
     .pipe(gulp.dest(config.imgs.offline.dest));
 });
 
+gulp.task('build:images', gulp.parallel('copy-images', 'optimize-images'));
+
 /******************
     Copy tasks
 ******************/
@@ -389,7 +391,7 @@ gulp.task('build', gulp.series(
     // linting before running any tasks on scripts
     gulp.series('lint', 'rev-rewrite'),
     'sw-rev',
-    'optimize-images',
+    'build:images',
     'copy-data'
   )
 ));
@@ -404,7 +406,7 @@ exports.default = gulp.series(
   },
   gulp.parallel(
     'copy-html',
-    'optimize-images',
+    'build:images',
     'styles',
     'copy-data',
     gulp.series(
