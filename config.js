@@ -65,8 +65,8 @@ module.exports = {
       {value: 1200, enlarge: true}
     ],
     offline: {
-      src: ['!src/img/offline.png'],
-      dest: 'app/'
+      src: ['src/img/offline.png'],
+      dest: 'app/assets'
     }
   },
   data: {
