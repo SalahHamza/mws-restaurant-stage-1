@@ -1,6 +1,7 @@
-const VERSION = '<<-!version->>';
-const staticCacheName  = `reviews-app--static-${VERSION}`;
-const mapCacheName = `reviews-app--mapAPI-${VERSION}`;
+// the version will be replaced in the build step
+const version = '<<-!version->>';
+const staticCacheName  = `reviews-app--static-${version}`;
+const mapCacheName = `reviews-app--mapAPI-${version}`;
 const allCaches = [
   staticCacheName,
   mapCacheName
@@ -17,27 +18,29 @@ const BASE_URL = (() => {
   return `${location.origin}/mws-restaurant-stage-1`;
 })();
 
+const staticToCache = require('static-to-cache')();
+const toCache = [
+  './',
+  './index.html',
+  './restaurant',
+  './restaurant.html',
+  ...staticToCache,
+  /* works as replacement for the server data */
+  './assets/data/restaurants.json',
+  /* will work as replacement to images */
+  './assets/offline.png',
+  /* Caching map assets */
+  'https://unpkg.com/leaflet@1.3.1/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.3.1/dist/leaflet.js',
+  'https://unpkg.com/leaflet@1.3.1/dist/images/marker-icon.png',
+  /* Cashing font face */
+  'https://fonts.googleapis.com/css?family=Lato:400,700'
+];
+
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(staticCacheName).then( cache => {
-      return cache.addAll([
-        './',
-        './index.html',
-        './restaurant.html',
-        './build/data/restaurants.json',
-        './build/css/styles.css',
-        './build/js/dbhelper.js',
-        './build/js/main.js',
-        './build/js/restaurant_info.js',
-        /* will work as replacement to images */
-        './offline.png',
-        /* Caching map assets */
-        'https://unpkg.com/leaflet@1.3.1/dist/leaflet.css',
-        'https://unpkg.com/leaflet@1.3.1/dist/leaflet.js',
-        'https://unpkg.com/leaflet@1.3.1/dist/images/marker-icon.png',
-        /* Cashing font face */
-        'https://fonts.googleapis.com/css?family=Lato:400,700'
-      ]);
+      return cache.addAll(toCache);
     })
   );
 });
@@ -98,7 +101,7 @@ self.addEventListener('fetch', event => {
         if (event.request.url.includes('.jpg')) {
           /* If no cache match for the image,
             return offline image */
-          return caches.match('./offline.png');
+          return caches.match('./assets/offline.png');
         }
       })
     );
