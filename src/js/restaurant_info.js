@@ -45,6 +45,7 @@ class RestaurantInfo {
     const id = this.getParameterByName('id');
     if (!id) { // no id found in URL
       const error = 'No restaurant id in URL';
+      this.handleRestaurantNotFound();
       callback(error, null);
     } else {
       DBHelper.fetchRestaurantById(id, (error, restaurant) => {
