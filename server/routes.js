@@ -2,7 +2,9 @@
 
 const
   fs = require('fs'),
-  path = require('path');
+  path = require('path'),
+  config = require('./../config'),
+  staticModule = require('static-module');
 
 const express = require('express');
 const router = express.Router();
@@ -24,30 +26,7 @@ router.use((req, res, next) => {
   next();
 });
 
-/*
- streaming service worker
- https://www.youtube.com/watch?v=3Tr-scf7trE&index=99&list=WL&t=1286s
-*/
-router.get('/sw.js', (req, res) => {
-  /*
-    since service workers have strict
-    mime type checking, we are setting
-    content-type header
-  */
-  res.set('Content-Type', 'application/javascript');
-  const readStream = fs.createReadStream(`${__dirname}/../app/sw.js`);
-  readStream.pipe(res);
-});
-
-// between hard coding a new route and installing serve-static
-// and setting max-age=0 for /rev-manifest.json, 3 lines of code
-// is less costy
-router.get('/rev-manifest.json', (req, res) => {
-  const readStream = fs.createReadStream(`${__dirname}/../app/rev-manifest.json`);
-  readStream.pipe(res);
-});
-
-router.get('/', (req, res) => {
+router.get(['/', '/index.html'], (req, res) => {
   res.render('index.html');
 });
 
@@ -60,5 +39,44 @@ router.get(['/restaurant', '/restaurant.html'], (req, res) => {
   res.render('restaurant.html');
 });
 
+/*
+ streaming service worker
+ https://www.youtube.com/watch?v=3Tr-scf7trE&index=99&list=WL&t=1286s
+*/
+router.get('/sw.js', (req, res) => {
+  const input = fs.createReadStream(`${__dirname}/../app/sw.js`);
+  /*
+    since service workers have strict
+    mime type checking, we are setting
+    content-type header
+  */
+  res.set('Content-Type', 'application/javascript');
+  // getting all fingerprinted filenames
+  // their paths is relative to the service
+  // worker location in the app
+  const revManifest = JSON.parse(fs.readFileSync(`${__dirname}/../${config.revManifest.path}`));
+  const toCache = Object.keys(revManifest)
+    .filter(filename => !filename.endsWith('.map'))
+    // returning relative paths './../..'
+    .map(filename => `./${revManifest[filename]}`);
+
+  input
+    // static-module gives access to functions
+    // as modules
+    .pipe(staticModule({
+      'static-to-cache': () => {
+        return JSON.stringify(toCache, null, 2);
+      }
+    }))
+    .pipe(res);
+});
+
+// between hard coding a new route and installing serve-static
+// and setting max-age=0 for /rev-manifest.json, 3 lines of code
+// is less costy
+router.get('/rev-manifest.json', (req, res) => {
+  const readStream = fs.createReadStream(`${__dirname}/../app/rev-manifest.json`);
+  readStream.pipe(res);
+});
 
 module.exports = router;
