@@ -18,7 +18,13 @@ const BASE_URL = (() => {
   return `${location.origin}/mws-restaurant-stage-1`;
 })();
 
+/*
+  this is an array of all fingerprinted filenames
+  which will be set dynamically when sending the file.
+  this is done with static-module
+*/
 const staticToCache = require('static-to-cache')();
+
 const toCache = [
   './',
   './index.html',
@@ -37,32 +43,31 @@ const toCache = [
   'https://fonts.googleapis.com/css?family=Lato:400,700'
 ];
 
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(staticCacheName).then( cache => {
-      return cache.addAll(toCache);
-    })
-  );
+addEventListener('install', event => {
+  event.waitUntil(async function() {
+    console.log('caching assets');
+    const cache = await caches.open(staticCacheName);
+    await cache.addAll(toCache);
+  }());
 });
 
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then( (keyList) => {
-      return Promise.all(
-        keyList.filter( (key) => {
-          return key.startsWith('reviews-app--') &&
-            !allCaches.includes(key);
-        }).map( (key) => {
-          return caches.delete(key);
-        })
-      );
-    })
-  );
+addEventListener('activate', event => {
+  event.waitUntil(async function() {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter(key => (
+          key.startsWith('reviews-app--') && !allCaches.includes(key)
+        ))
+        .map(key => caches.delete(key))
+    );
+  }());
+
   return self.clients.claim();
 });
 
 /*
-  - If request if for an inside page respond with '/restaurant.html'
+  - If request if for an inside page respond with '/restaurant'
   - If it's a MAP API asset request:
     - if there is internet access:
      * fetch new data from the network.
@@ -79,35 +84,53 @@ https://james-priest.github.io/mws-restaurant-stage-1/stage1.html
 NOTE: overall handling of the service worker is self implemented due
 to extra learning from this article by Jake Archibald
 https://jakearchibald.com/2014/offline-cookbook/
+
+NOTE: learnt async/await implementation in service worker
+in this Supercharged video by Jake Archibald & Surma
+https://www.youtube.com/watch?v=3Tr-scf7trE&t=2018s
+
 */
-self.addEventListener('fetch', event => {
+addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
   const mapAPIBaseUrl = 'https://api.tiles.mapbox.com/v4/';
-  const insideBaseUrl = `${BASE_URL}/restaurant.html?id=`;
+  const insideBaseUrlRE = new RegExp(`^${BASE_URL}/restaurant(.html)?(\\?id=\\d*)?$`);
 
-  if(event.request.url.includes(insideBaseUrl)){
-    event.respondWith(caches.match('./restaurant.html'));
+  if(insideBaseUrlRE.test(event.request.url)) {
+    event.respondWith(async function() {
+      const cachedResponse =  await caches.match('./restaurant');
+      // if there is no match the cachedResponse will be 'null' (i.e. falsey)
+      if(cachedResponse) return cachedResponse;
+
+      // when we return fetch, it's going to pass the Promise
+      // even if the promise rejects
+      // TODO:
+      // create a offline.html and use it as fallback
+      return fetch('./restaurant');
+    }());
+
     return;
-
-  } else if (event.request.url.includes(mapAPIBaseUrl)) {
-
-    event.respondWith(fetchAndCacheThenRespond(event.request, mapCacheName));
-    return;
-
-  } else {
-    event.respondWith(
-      caches.match(event.request).then(res => {
-        return res || fetch(event.request);
-      }).catch( () => {
-        if (event.request.url.includes('.jpg')) {
-          /* If no cache match for the image,
-            return offline image */
-          return caches.match('./assets/offline.png');
-        }
-      })
-    );
   }
+  // if the request is for an MAPBOX asset
+  if (event.request.url.includes(mapAPIBaseUrl)) {
+    event.respondWith(fetchAndUpdateCacheThenRespond(event.request, mapCacheName));
+    return;
+  }
+  // other requests
+  event.respondWith(async function() {
+    const cachedResponse = await caches.match(event.request);
+    if(cachedResponse) return cachedResponse;
+    try {
+      return await fetch(event.request);
+    } catch (err) {
+      if (event.request.url.includes('.jpg')) {
+        /* If no cache match for the image,
+          return offline image */
+        return await caches.match('./assets/offline.png');
+      }
+    }
+  }());
 });
-
 
 /**
  * checks if online, fetch data from network,
@@ -117,18 +140,15 @@ self.addEventListener('fetch', event => {
  * @param {string} cacheName - Cache name to cache data in
  * @returns {Object.<Response>} response object for the given request
  */
-function fetchAndCacheThenRespond(request, cacheName) {
-  /* Trying to fetch from network */
-  return caches.open(cacheName).then( cache => {
-    return cache.match(request).then( response => {
-      /* fetching resources from network */
-      const fetchPromise = fetch(request).then( networkResponse => {
-        cache.put(request, networkResponse.clone());
-        return networkResponse;
-      });
-      /* retrun network response if it exists
-        else return cached response */
-      return fetchPromise || response;
-    });
-  });
+async function fetchAndUpdateCacheThenRespond(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  // fetch data from network and update cache for that request
+  // if network fetch fails fallback to cache response
+  try {
+    const networkResponse = await fetch(request);
+    await cache.put(request, networkResponse.clone());
+    return networkResponse;
+  } catch(err) {
+    return await cache.match(request);
+  }
 }
