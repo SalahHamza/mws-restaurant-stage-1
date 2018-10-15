@@ -5,9 +5,6 @@ module.exports = {
 		"es6": true
 	},
 	"extends": "eslint:recommended",
-	"parserOptions": {
-		"sourceType": "module"
-	},
 	"globals": {
 		"L": true,
 		"DBHelper": true
@@ -32,6 +29,7 @@ module.exports = {
 		]
 	},
 	"parserOptions": {
-		"ecmaVersion": 2017
+		"ecmaVersion": 2017,
+		"sourceType": "module"
 	}
 };
