@@ -1,6 +1,5 @@
-//<<-!->>import DBHelper from './dbhelper.mjs';
-
-DBHelper.registerServiceWorker();
+import DBHelper from './dbhelper';
+import IndexController from './indexController';
 
 class RestaurantInfo {
 
@@ -277,4 +276,5 @@ class RestaurantInfo {
 (() => {
   const inside = new RestaurantInfo();
   inside.init();
+  new IndexController(document.body).init();
 })();
