@@ -6,34 +6,21 @@
 module.exports = {
   destBase: 'app/',
   styles: {
-    src: 'src/css/**/*.css',
+    src: ['src/css/styles.css', 'node_modules/@salahhamza/snackbars/lib/snackbar.css'],
     dest: 'app/assets/css',
     revDest: 'assets/css'
   },
   js: {
     main: {
-      src: [
-        'src/js/dbhelper.js',
-        'src/js/main.js',
-        '!node_modules/**'
-      ],
+      entry: 'src/js/main.js',
       fileName: 'main.js'
     },
     inside: {
-      src: [
-        'src/js/dbhelper.js',
-        'src/js/restaurant_info.js',
-        '!node_modules/**'
-      ],
+      entry: 'src/js/restaurant_info.js',
       fileName: 'inside.js'
     },
-    dest: 'app/assets/js/bundles',
-    revDest: 'assets/js/bundles',
-  },
-  mjs: {
-    src: ['src/js/**/*.js', '!src/js/sw.js' ,'!node_modules/**'],
-    dest: 'app/assets/js/modules',
-    revDest: 'assets/js/modules'
+    dest: 'app/assets/js',
+    revDest: 'assets/js'
   },
   sw: {
     src: 'src/js/sw.js',
