@@ -205,24 +205,6 @@ class DBHelper {
     return marker;
   }
 
-  /*  ============== Service Worker Registration ============== */
-  static registerServiceWorker() {
-
-    /* making sure browser supports service worker */
-    if ('serviceWorker' in navigator) {
-
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(() => {
-            console.log('Registering service worker');
-          })
-          .catch(() => {
-            console.log('Service Worker registration failed');
-          });
-      });
-    }
-  }
-
 }
 
 //<<-!->>export default DBHelper;
