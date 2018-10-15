@@ -1,40 +1,40 @@
+/*global __dirname :true*/
 /*=========== external ===========*/
-const gulp = require('gulp');
-// used to version static files
-const rev = require('gulp-rev');
-// used to delete folders and files
-const rimraf = require('rimraf');
-// used to convert files to es5
-const babel = require('gulp-babel');
-// used to lint code for syntax errors
-const eslint = require('gulp-eslint');
-// used to rename files
-const rename = require('gulp-rename');
-// used to combine a set of defined files into one big file
-const concat = require('gulp-concat');
-// used to replace string
-const replace = require('gulp-replace');
-// used to minify css
-const cleanCSS = require('gulp-clean-css');
-// used to generate source map
-const sourcemaps = require('gulp-sourcemaps');
-// used to generate/optimize images
-const responsive = require('gulp-responsive');
-// used to replace filename occurences with their fingerprinted counterparts
-const revRewrite = require('gulp-rev-rewrite');
-// used to minify .js files (compatible with es6)
-const uglify = require('gulp-uglify-es').default;
-// used to autoprefix css
-const autoprefixer = require('gulp-autoprefixer');
-// used to delete original file after revision (adding fingerprint)
-const revDelete = require('gulp-rev-delete-original');
-// used to do live editing in the browser
-const browserSync = require('browser-sync').create();
+const
+  gulp = require('gulp'),
+  // used to version static files
+  rev = require('gulp-rev'),
+  // used to delete folders and files
+  rimraf = require('rimraf'),
+  // used to lint code for syntax errors
+  eslint = require('gulp-eslint'),
+  // used to rename files
+  rename = require('gulp-rename'),
+  // used to combine a set of defined files into one big file
+  concat = require('gulp-concat'),
+  // used to replace string
+  replace = require('gulp-replace'),
+  // used to minify css
+  cleanCSS = require('gulp-clean-css'),
+  // used to generate source map
+  sourcemaps = require('gulp-sourcemaps'),
+  // used to generate/optimize images
+  responsive = require('gulp-responsive'),
+  // used to replace filename occurences with their fingerprinted counterparts
+  revRewrite = require('gulp-rev-rewrite'),
+  // used to run webpack as a stream to use with gulp
+  webpack = require('webpack-stream'),
+  // used to autoprefix css
+  autoprefixer = require('gulp-autoprefixer'),
+  // used to delete original file after revision (adding fingerprint)
+  revDelete = require('gulp-rev-delete-original'),
+  // used to do live editing in the browser
+  browserSync = require('browser-sync').create();
 /*=========== internal ===========*/
 // config contains all file build paths, image sizes and all
 const config = require('./config');
 const pkg = require('./package.json');
-
+const path = require('path');
 
 /******************
     Styles tasks
@@ -47,12 +47,8 @@ gulp.task('styles', () => {
         browsers: ['last 2 versions']
       })
     )
-    .pipe(cleanCSS({debug: true}, (details) => {
-      console.log(`${details.name}: ${details.stats.originalSize}`);
-      console.log(`${details.name}: ${details.stats.minifiedSize}`);
-    }))
+    .pipe(concat('styles.css'))
     .pipe(gulp.dest(config.styles.dest))
-    .pipe(sourcemaps.write())
     .pipe(browserSync.stream());
 });
 
@@ -65,11 +61,11 @@ gulp.task('build:styles', () => {
         browsers: ['last 2 versions']
       })
     )
+    .pipe(concat('styles.css'))
     .pipe(cleanCSS())
     .pipe(sourcemaps.write('.'))
     .pipe(gulp.dest(config.styles.dest));
 });
-
 
 
 /******************
@@ -92,100 +88,23 @@ gulp.task('lint', () => {
 /******************
     Scripts tasks
 ******************/
-
-/*======= bundled scripts =======*/
-
-const concatScript = globs => {
-  return globs.map(glob => {
-    return () => gulp.src(glob.details.src)
-      .pipe(sourcemaps.init())
-      .pipe(babel({
-        presets: ['@babel/preset-env']
-      }))
-      .pipe(concat(glob.details.fileName))
-      .pipe(sourcemaps.write())
-      .pipe(gulp.dest(glob.dest));
-  });
+const bundleScripts = (mode = 'production') => {
+  return () => {
+    return gulp.src(config.js.main.entry)
+      .pipe(webpack(
+        Object.assign({}, {
+          entry : {
+            inside: path.join(__dirname, config.js.inside.entry),
+            main: path.join(__dirname, config.js.main.entry)
+          },
+          mode
+        }, config.webpack)))
+      .pipe(gulp.dest(config.js.dest));
+  };
 };
 
-
-gulp.task('js-scripts',
-  gulp.parallel(...concatScript([
-    {details: config.js.main, dest: config.js.dest},
-    {details: config.js.inside, dest: config.js.dest}
-  ]))
-);
-
-
-const concatAndUglifyScript = globs => {
-  return globs.map(glob => {
-    return () => gulp.src(glob.details.src)
-      .pipe(sourcemaps.init())
-      .pipe(babel({
-        presets: ['@babel/preset-env']
-      }))
-      .pipe(concat({path: glob.details.fileName, cwd: ''}))
-      .pipe(uglify())
-      .pipe(sourcemaps.write('.'))
-      .pipe(gulp.dest(glob.dest));
-  });
-
-};
-
-gulp.task('build:js-scripts',
-  gulp.parallel(...concatAndUglifyScript([
-    {details: config.js.main, dest: config.js.dest},
-    {details: config.js.inside, dest: config.js.dest}
-  ]))
-);
-
-/*======= modules =======*/
-
-gulp.task('mjs-scripts', () => {
-  return gulp.src(config.mjs.src)
-    .pipe(replace('//<<-!->>', ''))
-    .pipe(replace('//<<-!->>', ''))
-    .pipe(rename({
-      extname: '.mjs'
-    }))
-    .pipe(gulp.dest(config.mjs.dest));
-});
-
-/**
- * task to build modules scripts with .mjs extension
- * instead of .js extension to be used as modules
- */
-
-gulp.task('build:mjs-scripts', () => {
-  return gulp.src(config.mjs.src)
-    /*
-      since we are creating both .js (bundles)
-      and .mjs (modules), the import/export statements
-      are preceded with a comment '//<<-!->>' that we
-      get rid off when we are generating .mjs files
-      using the replace plugin.
-    */
-    .pipe(replace('//<<-!->>', ''))
-    .pipe(replace('//<<-!->>', ''))
-    .pipe(sourcemaps.init())
-    .pipe(uglify())
-    .pipe(sourcemaps.write('.', {
-      mapFile(mapFilePath) {
-        // source map files are named *.mjs.map instead of *.js.map
-        return mapFilePath.replace('.js.map', '.mjs.map');
-      },
-      sourceMappingURL(file) {
-        return file.relative.replace('.js', '.mjs') + '.map';
-      }
-    }))
-    .pipe(rename( filePath => {
-      if(filePath.extname === '.js') {
-        filePath.extname = '.mjs';
-      }
-    }))
-    .pipe(gulp.dest(config.mjs.dest));
-});
-
+gulp.task('scripts', bundleScripts('development'));
+gulp.task('build:scripts', bundleScripts());
 /*======= service worker =======*/
 
 
@@ -194,12 +113,6 @@ gulp.task('sw-rev', () => {
     .pipe(replace('<<-!version->>', pkg.version))
     .pipe(gulp.dest(config.sw.dest));
 });
-
-/*======= scripts =======*/
-
-gulp.task('scripts', gulp.parallel('js-scripts', 'mjs-scripts'));
-
-gulp.task('build:scripts', gulp.parallel('build:js-scripts', 'build:mjs-scripts'));
 
 /******************
     images tasks
@@ -300,7 +213,6 @@ const revisionTasks = globs => {
 gulp.task('revision', gulp.series(
   gulp.parallel('build:styles', 'build:scripts'),
   gulp.parallel(...revisionTasks([
-    {opt: config.mjs, ext: 'mjs'},
     {opt: config.js, ext: 'js'},
     {opt: config.styles, ext: 'css'}
   ]))
@@ -352,8 +264,7 @@ gulp.task('rev-rewrite', gulp.series(
   gulp.parallel(...revReplaceTasks([
     {dest: config.html.dest, ext: 'html'},
     {dest: config.styles.dest, ext: 'css'},
-    {dest: config.js.dest, ext: 'js'},
-    {dest: config.mjs.dest, ext: 'mjs'}
+    {dest: config.js.dest, ext: 'js'}
   ]))
 ));
 
