@@ -140,11 +140,13 @@ class MainPage {
     const image = document.createElement('img');
     image.className = 'restaurant-img';
     image.src = DBHelper.imageUrlForRestaurant(
-      restaurant.photograph,
+      // since 'photograph' is the same as 'id'
+      // we fallback to the 'id'
+      restaurant.photograph || restaurant.id,
       defaultSize
     );
     image.srcset = DBHelper.imageSrcsetForRestaurant(
-      restaurant.photograph,
+      restaurant.photograph || restaurant.id,
       imgSizes
     );
     image.sizes = `(min-width: 416px) and (max-width: 632px) 400px,
