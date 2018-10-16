@@ -38,6 +38,7 @@
   },
   "homepage": "https://github.com/SalahHamza/mws-restaurant-stage-1#readme",
   "dependencies": {
+    "@babel/polyfill": "^7.0.0",
     "@salahhamza/snackbars": "^2.1.3",
     "compression": "^1.7.3",
     "ejs": "^2.6.1",
