@@ -323,7 +323,8 @@ exports.default = gulp.series(
     gulp.series(
       'lint',
       'scripts'
-    )
+    ),
+    'sw-rev'
   ),
   'live-editing'
 );
