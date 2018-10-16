@@ -1,5 +1,3 @@
-/*eslint no-unused-vars: ["error", { "varsIgnorePattern": "DBHelper" }]*/
-
 /*
  Change this to your base url in local env
  that would be 'http://localhost:port'
@@ -21,7 +19,7 @@ class DBHelper {
    * it in the script
    */
   static fetchMAPBOXToken() {
-    return fetch(DBHelper.DATABASE_URL)
+    return fetch(`${BASE_URL}/assets/data/restaurants.json`)
       .then(res => res.json())
       .then(data => data.MAPBOX_TOKEN)
       .catch(err => {
@@ -34,26 +32,22 @@ class DBHelper {
    * Change this to restaurants.json file location on your server.
    */
   static get DATABASE_URL() {
-    return `${BASE_URL}/assets/data/restaurants.json`;
+    return 'http://localhost:1337/restaurants';
   }
 
   /**
    * Fetch all restaurants.
    */
   static fetchRestaurants(callback) {
-    let xhr = new XMLHttpRequest();
-    xhr.open('GET', DBHelper.DATABASE_URL);
-    xhr.onload = () => {
-      if (xhr.status === 200) { // Got a success response from server!
-        const json = JSON.parse(xhr.responseText);
-        const restaurants = json.restaurants;
+    fetch(DBHelper.DATABASE_URL)
+      .then(res => res.json())
+      .then(restaurants => {
         callback(null, restaurants);
-      } else { // Oops!. Got an error from server.
-        const error = (`Request failed. Returned status of ${xhr.status}`);
+      })
+      .catch(err => {
+        const error = `Request failed. ${err}`;
         callback(error, null);
-      }
-    };
-    xhr.send();
+      });
   }
 
   /**
@@ -207,4 +201,4 @@ class DBHelper {
 
 }
 
-//<<-!->>export default DBHelper;
+export default DBHelper;
