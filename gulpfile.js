@@ -1,4 +1,4 @@
-/*global __dirname :true*/
+/*global __dirname:true*/
 /*=========== external ===========*/
 const
   gulp = require('gulp'),
@@ -31,7 +31,7 @@ const
   // used to do live editing in the browser
   browserSync = require('browser-sync').create();
 /*=========== internal ===========*/
-// config contains all file build paths, image sizes and all
+// config contains all file build paths, image sizes and other stuff
 const config = require('./config');
 const pkg = require('./package.json');
 const path = require('path');
@@ -282,9 +282,8 @@ gulp.task('live-editing', done => {
     .on('change', browserSync.reload);
 
   browserSync.init({
-    server: {
-      baseDir: config.destBase
-    }
+    proxy: config.devURL,
+    open: false
   });
   done();
 });
