@@ -54,11 +54,18 @@ router.get('/sw.js', (req, res) => {
   // getting all fingerprinted filenames
   // their paths is relative to the service
   // worker location in the app
-  const revManifest = JSON.parse(fs.readFileSync(`${__dirname}/../${config.revManifest.path}`));
-  const toCache = Object.keys(revManifest)
-    .filter(filename => !filename.endsWith('.map'))
-    // returning relative paths './../..'
-    .map(filename => `./${revManifest[filename]}`);
+  let toCache = [];
+  try {
+    const revManifest = JSON.parse(fs.readFileSync(`${__dirname}/../${config.revManifest.path}`));
+    toCache = Object.keys(revManifest)
+      .filter(filename => !filename.endsWith('.map'))
+      // returning relative paths './../..'
+      .map(filename => `./${revManifest[filename]}`);
+  } catch(err) {
+    // in development the rev-manifest.json file doesn't exist
+    // so fallback to the non-fingerprinted filenames
+    toCache = config.toCache;
+  }
 
   input
     // static-module gives access to functions
