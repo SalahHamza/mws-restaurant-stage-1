@@ -176,13 +176,9 @@ class DBHelper {
   }
 
   static imageSrcsetForRestaurant(photograph, sizes=[]){
-    const imgPaths = [];
-    sizes.forEach(size => {
-      imgPaths.push(
-        `${BASE_URL}/assets/img/${photograph}-${size}w.jpg ${size}w`
-      );
-    });
-    return imgPaths.join(', ');
+    return sizes
+      .map(size => `${BASE_URL}/assets/img/${photograph}-${size}w.jpg ${size}w`)
+      .join(', ');
   }
 
   /**
