@@ -1,3 +1,6 @@
+/*global process:true*/
+const dotenv = require('dotenv');
+dotenv.config();
 /**
  * abstracting away configuration for every task
  * so that we don't have to change every occurence
@@ -87,5 +90,15 @@ module.exports = {
         }
       ]
     }
+  },
+  toCache: [
+    './assets/js/inside.js',
+    './assets/js/main.js',
+    './assets/css/styles.css'
+  ],
+  port: process.env.PORT || 3000,
+  mapboxKey: process.env.MAPBOX_TOKEN,
+  get devURL() {
+    return `localhost:${this.port}`;
   }
 };
