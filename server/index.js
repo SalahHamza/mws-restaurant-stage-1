@@ -6,6 +6,8 @@ const
   express = require('express'),
   compression = require('compression');
 
+const config = require('./../config');
+
 const app = express();
 // enabling text based responses compression
 app.use(compression());
@@ -24,7 +26,7 @@ app.use(require('./routes'));
 const argv = yargs.options({
   'port': {
     describe: 'server port',
-    default: 3000,
+    default: config.port,
     type: 'number'
   },
   'protocol': {
