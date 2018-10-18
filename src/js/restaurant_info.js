@@ -2,6 +2,9 @@ import DBHelper from './dbhelper';
 import IndexController from './indexController';
 
 class RestaurantInfo {
+  constructor() {
+    this.dbHelper = new DBHelper();
+  }
 
   /**
    * Initialize leaflet map
@@ -47,7 +50,7 @@ class RestaurantInfo {
       this.handleRestaurantNotFound();
       callback(error, null);
     } else {
-      DBHelper.fetchRestaurantById(id, (error, restaurant) => {
+      this.dbHelper.fetchRestaurantById(id, (error, restaurant) => {
         this.restaurant = restaurant;
         if (!restaurant) {
           console.error(error);

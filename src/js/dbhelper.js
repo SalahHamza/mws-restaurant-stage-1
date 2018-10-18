@@ -1,4 +1,5 @@
 import '@babel/polyfill';
+
 /*
  Change this to your base url in local env
  that would be 'http://localhost:port'
@@ -10,11 +11,11 @@ const BASE_URL = (() => {
   return `${location.origin}/mws-restaurant-stage-1`;
 })();
 
+
 /**
  * Common database helper functions.
  */
 class DBHelper {
-
   /**
    * Fetch MAPBOX Token from DB instead of including
    * it in the script
@@ -39,7 +40,7 @@ class DBHelper {
   /**
    * Fetch all restaurants.
    */
-  static async fetchRestaurants(callback) {
+  async fetchRestaurants(callback) {
     try {
       const res = await fetch(DBHelper.DATABASE_URL);
       const restaurants = await res.json();
@@ -49,10 +50,11 @@ class DBHelper {
     }
   }
 
+
   /**
    * Fetch a restaurant by its ID.
    */
-  static async fetchRestaurantById(id, callback) {
+  async fetchRestaurantById(id, callback) {
     // fetch all restaurants with proper error handling.
     try {
       const res = await fetch(`${DBHelper.DATABASE_URL}?id=${id}`);
@@ -66,7 +68,7 @@ class DBHelper {
   /**
    * Fetch restaurants by a cuisine type with proper error handling.
    */
-  static async fetchRestaurantByCuisine(cuisine, callback) {
+  async fetchRestaurantByCuisine(cuisine, callback) {
     // Fetch all restaurants  with proper error handling
     try {
       const res = await fetch(`${DBHelper.DATABASE_URL}?cuisine_type=${cuisine}`);
@@ -80,12 +82,11 @@ class DBHelper {
   /**
    * Fetch restaurants by a neighborhood with proper error handling.
    */
-  static async fetchRestaurantByNeighborhood(neighborhood, callback) {
+  async fetchRestaurantByNeighborhood(neighborhood, callback) {
     // Fetch all restaurants
     try {
       const res = await fetch(`${DBHelper.DATABASE_URL}?neighborhood=${neighborhood}`);
       const restaurants = await res.json();
-      console.log(restaurants);
       callback(null, restaurants);
     } catch(err) {
       callback(err, null);
@@ -95,21 +96,21 @@ class DBHelper {
   /**
    * Fetch restaurants by a cuisine and a neighborhood with proper error handling.
    */
-  static async fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, callback) {
+  async fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, callback) {
     // Fetch all restaurants
     if(cuisine === 'all' && neighborhood === 'all') {
-      await DBHelper.fetchRestaurants(callback);
+      await this.fetchRestaurants(callback);
       return;
     }
     // fetch by neighborhood
     if(cuisine === 'all') {
-      await DBHelper.fetchRestaurantByNeighborhood(neighborhood, callback);
+      await this.fetchRestaurantByNeighborhood(neighborhood, callback);
       return;
     }
     // fetch by cuisine
     if(neighborhood === 'all') {
       console.log('cuisine');
-      await DBHelper.fetchRestaurantByCuisine(cuisine, callback);
+      await this.fetchRestaurantByCuisine(cuisine, callback);
       return;
     }
     // fetch by neighborhood & cuisine
@@ -126,9 +127,9 @@ class DBHelper {
   /**
    * Fetch all neighborhoods with proper error handling.
    */
-  static async fetchNeighborhoods(callback) {
+  async fetchNeighborhoods(callback) {
     // Fetch all restaurants
-    await DBHelper.fetchRestaurants((error, restaurants) => {
+    await this.fetchRestaurants((error, restaurants) => {
       if (error) {
         callback(error, null);
       } else {
@@ -144,9 +145,9 @@ class DBHelper {
   /**
    * Fetch all cuisines with proper error handling.
    */
-  static async fetchCuisines(callback) {
+  async fetchCuisines(callback) {
     // Fetch all restaurants
-    await DBHelper.fetchRestaurants((error, restaurants) => {
+    await this.fetchRestaurants((error, restaurants) => {
       if (error) {
         callback(error, null);
       } else {

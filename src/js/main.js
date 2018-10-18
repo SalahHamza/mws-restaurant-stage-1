@@ -6,6 +6,7 @@ class MainPage {
     this.neighborhoods = [];
     this.cuisines = [];
     this.markers = [];
+    this.dbHelper = new DBHelper();
   }
 
   /**********************
@@ -16,7 +17,7 @@ class MainPage {
    * Fetch all neighborhoods and set their HTML.
    */
   fetchNeighborhoods() {
-    DBHelper.fetchNeighborhoods((error, neighborhoods) => {
+    this.dbHelper.fetchNeighborhoods((error, neighborhoods) => {
       if (error) { // Got an error
         console.error(error);
       } else {
@@ -30,7 +31,7 @@ class MainPage {
    * Fetch all cuisines and set their HTML.
    */
   fetchCuisines() {
-    DBHelper.fetchCuisines((error, cuisines) => {
+    this.dbHelper.fetchCuisines((error, cuisines) => {
       if (error) { // Got an error!
         console.error(error);
       } else {
@@ -85,7 +86,7 @@ class MainPage {
     const cuisine = cSelect[cIndex].value;
     const neighborhood = nSelect[nIndex].value;
 
-    DBHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, restaurants) => {
+    this.dbHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, restaurants) => {
       if (error) { // Got an error!
         console.error(error);
       } else {
