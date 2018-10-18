@@ -1,4 +1,5 @@
 import '@babel/polyfill';
+import idb from 'idb';
 
 /*
  Change this to your base url in local env
@@ -16,6 +17,9 @@ const BASE_URL = (() => {
  * Common database helper functions.
  */
 class DBHelper {
+  constructor() {
+    this.openDatabase();
+  }
   /**
    * Fetch MAPBOX Token from DB instead of including
    * it in the script
@@ -35,6 +39,35 @@ class DBHelper {
    */
   static get DATABASE_URL() {
     return 'http://localhost:1337/restaurants';
+  }
+
+  openDatabase() {
+    // If the browser doesn't support service worker,
+    // we don't care about having a database
+    if (!navigator.serviceWorker) {
+      return Promise.resolve();
+    }
+
+    this.idbPromise = idb
+      .open('reviews-app', 1, upgradeDb => {
+        const store = upgradeDb.createObjectStore('restaurants', {
+          keyPath: 'id'
+        });
+        store.createIndex('by-cuisine', 'cuisine_type');
+        store.createIndex('by-neighborhood', 'neighborhood');
+      })
+      .then(db => {
+        // fetch and store restaurants right after
+        // creating the IDB
+        this.fetchRestaurants((error, restaurants) => {
+          if (error) return;
+          const tx = db.transaction('restaurants', 'readwrite');
+          const store = tx.objectStore('restaurants');
+          for (const restaurant of restaurants) {
+            store.put(restaurant);
+          }
+        });
+      });
   }
 
   /**
