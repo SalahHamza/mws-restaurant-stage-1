@@ -94,6 +94,7 @@ class DBHelper {
 
       const tx = db.transaction('restaurants');
       const store = tx.objectStore('restaurants');
+      // get all restaurants
       const restaurants = await store.getAll();
 
       if(restaurants.length) {
@@ -122,6 +123,7 @@ class DBHelper {
 
       const tx = db.transaction('restaurants');
       const store = tx.objectStore('restaurants');
+      // get restaurant with this 'id'
       const restaurant = await store.get(Number(id));
 
       if(restaurant) {
@@ -143,6 +145,18 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
+      const db = await this.idbPromise;
+      if(!db) return;
+
+      const tx = db.transaction('restaurants');
+      const index = tx.objectStore('restaurants').index('by-cuisine');
+      // getting all restaurants with this cuisine_type
+      const restaurants = await index.getAll(cuisine);
+
+      if(restaurants) {
+        callback(null, restaurants);
+        return tx.complete;
+      }
       callback(err, null);
     }
   }
