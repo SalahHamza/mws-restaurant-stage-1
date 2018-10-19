@@ -171,6 +171,18 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
+      const db = await this.idbPromise;
+      if(!db) return;
+
+      const tx = db.transaction('restaurants');
+      const index = tx.objectStore('restaurants').index('by-neighborhood');
+      // getting all restaurants with this cuisine_type
+      const restaurants = await index.getAll(neighborhood);
+
+      if(restaurants) {
+        callback(null, restaurants);
+        return tx.complete;
+      }
       callback(err, null);
     }
   }
