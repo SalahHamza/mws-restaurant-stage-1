@@ -18,7 +18,8 @@ const BASE_URL = (() => {
  */
 class DBHelper {
   constructor() {
-    this.openDatabase();
+    this.idbPromise = this.openDatabase();
+    console.log('hihih');
   }
   /**
    * Fetch MAPBOX Token from DB instead of including
@@ -41,6 +42,12 @@ class DBHelper {
     return 'http://localhost:1337/restaurants';
   }
 
+
+  /**
+   * Open a IDB database, create an objectStore,
+   * fetch restaurants and stores them
+   * @return {Promise} - idbPromise to access database
+   */
   openDatabase() {
     // If the browser doesn't support service worker,
     // we don't care about having a database
@@ -48,7 +55,7 @@ class DBHelper {
       return Promise.resolve();
     }
 
-    this.idbPromise = idb
+    return idb
       .open('reviews-app', 1, upgradeDb => {
         const store = upgradeDb.createObjectStore('restaurants', {
           keyPath: 'id'
