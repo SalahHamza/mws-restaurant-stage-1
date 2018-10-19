@@ -117,7 +117,19 @@ class DBHelper {
       const restaurant = await res.json();
       callback(null, restaurant);
     } catch(err) {
+      const db = await this.idbPromise;
+      if(!db) return;
+
+      const tx = db.transaction('restaurants');
+      const store = tx.objectStore('restaurants');
+      const restaurant = await store.get(Number(id));
+
+      if(restaurant) {
+        callback(null, restaurant);
+        return tx.complete;
+      }
       callback('Restaurant does not exist', null);
+      return tx.complete;
     }
   }
 
