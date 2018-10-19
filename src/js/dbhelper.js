@@ -158,6 +158,7 @@ class DBHelper {
         return tx.complete;
       }
       callback(err, null);
+      return tx.complete;
     }
   }
 
@@ -176,7 +177,7 @@ class DBHelper {
 
       const tx = db.transaction('restaurants');
       const index = tx.objectStore('restaurants').index('by-neighborhood');
-      // getting all restaurants with this cuisine_type
+      // getting all restaurants with this neighborhood
       const restaurants = await index.getAll(neighborhood);
 
       if(restaurants) {
@@ -184,6 +185,7 @@ class DBHelper {
         return tx.complete;
       }
       callback(err, null);
+      return tx.complete;
     }
   }
 
@@ -203,7 +205,6 @@ class DBHelper {
     }
     // fetch by cuisine
     if(neighborhood === 'all') {
-      console.log('cuisine');
       await this.fetchRestaurantByCuisine(cuisine, callback);
       return;
     }
@@ -211,10 +212,25 @@ class DBHelper {
     try {
       const res = await fetch(`${DBHelper.DATABASE_URL}?neighborhood=${neighborhood}&cuisine_type=${cuisine}`);
       const restaurants = await res.json();
-      console.log(restaurants);
       callback(null, restaurants);
     } catch(err) {
+      const db = await this.idbPromise;
+      if(!db) return;
+
+      const tx = db.transaction('restaurants');
+      const index = tx.objectStore('restaurants').index('by-neighborhood');
+
+      // getting all restaurants with this neighboorhood
+      let restaurants = await index.getAll(neighborhood);
+      // only keeping restaurants with this cuisine_type
+      restaurants = restaurants.filter(restaurant => restaurant.cuisine_type === cuisine);
+
+      if(restaurants) {
+        callback(null, restaurants);
+        return tx.complete;
+      }
       callback(err, null);
+      return tx.complete;
     }
   }
 
