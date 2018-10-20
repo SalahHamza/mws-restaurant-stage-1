@@ -2,9 +2,11 @@
 const version = '<<-!version->>';
 const staticCacheName  = `reviews-app--static-${version}`;
 const mapCacheName = 'reviews-app--mapAPI';
+const contentImgsCacheName = 'reviews-app--content-imgs';
 const allCaches = [
   staticCacheName,
-  mapCacheName
+  mapCacheName,
+  contentImgsCacheName
 ];
 
 
@@ -102,6 +104,10 @@ addEventListener('fetch', event => {
       return;
     }
 
+    if(requestUrl.pathname.startsWith('/assets/img/')) {
+      event.respondWith(servePhoto(event.request));
+      return;
+    }
   }
 
   // if the request is for an MAPBOX asset
@@ -145,3 +151,21 @@ async function fetchAndUpdateCacheThenRespond(request, cacheName) {
     return await cache.match(request);
   }
 }
+
+
+async function servePhoto(request) {
+  // images are not fingerprinted so it's as simple
+  // as: 5-800w.jpg
+  const storageUrl = request.url.replace(/-\d+w\.jpg$/, '');
+  const cache = await caches.open(contentImgsCacheName);
+  const cachedResponse = await cache.match(storageUrl);
+  if(cachedResponse) return cachedResponse;
+  try {
+    const networkResponse = await fetch(request);
+    await cache.put(storageUrl, networkResponse.clone());
+    return networkResponse;
+  } catch (err) {
+    return await caches.match('./assets/offline.png');
+  }
+}
+
