@@ -275,7 +275,7 @@ gulp.task('rev-rewrite', gulp.series(
 gulp.task('live-editing', done => {
   gulp.watch(config.styles.src, gulp.parallel('styles'));
   gulp.watch(config.lint.src, gulp.parallel('lint'));
-  gulp.watch('src/js/**/*.js', gulp.parallel('scripts'));
+  gulp.watch('src/js/**/*.js', gulp.parallel('scripts', 'sw-rev'));
   // listening for changes in the html file
   // and reloading browserSync on changes
   gulp.watch(config.html.src)
