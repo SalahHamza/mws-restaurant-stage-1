@@ -153,19 +153,91 @@ async function fetchAndUpdateCacheThenRespond(request, cacheName) {
 }
 
 
+
+
+
+/*
+  pseudo code:
+  - extract storageUrl (url without size and extension)
+  - extract requested_image_size
+  - open cache and get cached response if it exists
+  - if cached response exists:
+    * extract cached_image_size from custome header 'size'
+    * if requested_image_size > cached_image_size:
+      - fetch image (with bigger requested size) from network
+      - create new response with a custome header 'size'
+      - update cache entry for that storageURl
+      - return response
+    else: return cached response
+  else:
+    - fetch image (with bigger requested size) from network
+    - create new response with a custome header 'size'
+    - update cache entry for that storageURl
+    - return response
+*/
+/**
+ * fetch and cache the largest requested copy of the image
+ */
 async function servePhoto(request) {
   // images are not fingerprinted so it's as simple
   // as: 5-800w.jpg
-  const storageUrl = request.url.replace(/-\d+w\.jpg$/, '');
+  const imageUrl = request.url;
+  const storageUrl = imageUrl.replace(/-\d+w\.jpg$/, '');
+
+  // extracting the requested image size i.e. 5-'800'w.jpg
+  const requestedImageSize = Number(imageUrl.slice(
+    imageUrl.indexOf('-') + 1,
+    imageUrl.indexOf('w')
+  ));
+
+  // opening cache and getting cached response if it exists
   const cache = await caches.open(contentImgsCacheName);
   const cachedResponse = await cache.match(storageUrl);
-  if(cachedResponse) return cachedResponse;
+
+  if(cachedResponse) {
+    const cachedImageSize = Number(cachedResponse.headers.get('size'));
+    if(cachedImageSize < requestedImageSize) {
+      try {
+        // imageFetchAndCache() is async, so if we return
+        // the promise it will be passed to event.respondWith()
+        // even if the promise will reject, that's why we need
+        // to 'return await' so that we can catch if the fetching fails
+        return await imageFetchAndCache({
+          cache,
+          request,
+          storageUrl,
+          size: requestedImageSize
+        });
+      } catch(err) {
+        return cachedResponse;
+      }
+    }
+    return cachedResponse;
+  }
+
   try {
-    const networkResponse = await fetch(request);
-    await cache.put(storageUrl, networkResponse.clone());
-    return networkResponse;
+    return await imageFetchAndCache({
+      cache,
+      request,
+      storageUrl,
+      size: requestedImageSize
+    });
   } catch (err) {
-    return await caches.match('./assets/offline.png');
+    return caches.match('./assets/offline.png');
   }
 }
 
+/**
+ * makes a fetch request for the provided request,
+ * creates a new response with a costume header
+ * 'size' (with image sizeas value) from the response we get,
+ * caches a clone of the response and returns the response
+ */
+async function imageFetchAndCache({cache, request, storageUrl, size}) {
+  const networkResponse = await fetch(request);
+  const blob = await networkResponse.blob();
+  const headers = new Headers({ size });
+  const res = new Response(blob, { headers });
+  await cache.put(storageUrl, res.clone());
+  return res;
+}
