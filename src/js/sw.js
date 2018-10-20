@@ -80,6 +80,9 @@ NOTE: learnt async/await implementation in service worker
 in this Supercharged video by Jake Archibald & Surma
 https://www.youtube.com/watch?v=3Tr-scf7trE&t=2018s
 
+NOTE: Caching everything that comes from the MAPBOX API is not
+a good idea since the content size increases quickly
+
 */
 addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
@@ -131,6 +134,21 @@ addEventListener('fetch', event => {
   }());
 });
 
+
+/**
+ * listening for a message from the client
+ * stating that service worker should skip the
+ * waiting state
+ */
+addEventListener('message', event => {
+  if (event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
+
+
+/* ========== Helper functions ========== */
+
 /**
  * checks if online, fetch data from network,
  * updates cache and repond with data
@@ -151,9 +169,6 @@ async function fetchAndUpdateCacheThenRespond(request, cacheName) {
     return await cache.match(request);
   }
 }
-
-
-
 
 
 /*
@@ -226,6 +241,8 @@ async function servePhoto(request) {
     return caches.match('./assets/offline.png');
   }
 }
+
+
 
 /**
  * makes a fetch request for the provided request,
