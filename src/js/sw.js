@@ -7,16 +7,6 @@ const allCaches = [
   mapCacheName
 ];
 
-/**
- * this allows the website to work in
- * both github pages and local env
- */
-const BASE_URL = (() => {
-  if(location.origin.includes('localhost:')){
-    return location.origin;
-  }
-  return `${location.origin}/mws-restaurant-stage-1`;
-})();
 
 /*
   this is an array of all fingerprinted filenames
@@ -92,26 +82,30 @@ https://www.youtube.com/watch?v=3Tr-scf7trE&t=2018s
 addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
-  const mapAPIBaseUrl = 'https://api.tiles.mapbox.com/v4/';
-  const insideBaseUrlRE = new RegExp(`^${BASE_URL}/restaurant(.html)?(\\?id=\\d*)?$`);
+  const requestUrl = new URL(event.request.url);
 
-  if(insideBaseUrlRE.test(event.request.url)) {
-    event.respondWith(async function() {
-      const cachedResponse =  await caches.match('./restaurant');
-      // if there is no match the cachedResponse will be 'null' (i.e. falsey)
-      if(cachedResponse) return cachedResponse;
+  if(location.origin === requestUrl.origin)  {
 
-      // when we return fetch, it's going to pass the Promise
-      // even if the promise rejects
-      // TODO:
-      // create a offline.html and use it as fallback
-      return fetch('./restaurant');
-    }());
+    // only match /restaurant.html or /restaurant
+    if(/^\/restaurant(\.html)?$/.test(requestUrl.pathname)) {
+      event.respondWith(async function() {
+        const cachedResponse =  await caches.match('./restaurant');
+        // if there is no match the cachedResponse will be 'null' (i.e. falsey)
+        if(cachedResponse) return cachedResponse;
 
-    return;
+        // when we return fetch, it's going to pass the Promise
+        // even if the promise rejects
+        // TODO:
+        // create a offline.html and use it as fallback
+        return fetch('./restaurant');
+      }());
+      return;
+    }
+
   }
+
   // if the request is for an MAPBOX asset
-  if (event.request.url.includes(mapAPIBaseUrl)) {
+  if (requestUrl.origin === 'https://api.tiles.mapbox.com') {
     event.respondWith(fetchAndUpdateCacheThenRespond(event.request, mapCacheName));
     return;
   }
