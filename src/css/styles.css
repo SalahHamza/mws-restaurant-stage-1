@@ -335,7 +335,6 @@ nav {
 	background-color: var(--secondary-color-lt);
   display: block;
   margin: 0;
-  min-width: 100%;
   border-radius: 1px;
 }
 
@@ -471,6 +470,7 @@ nav {
 
 .restaurant-img {
   border-radius: 3px 3px 0 0;
+  min-width: 100%;
 }
 
 .restaurant-address {
