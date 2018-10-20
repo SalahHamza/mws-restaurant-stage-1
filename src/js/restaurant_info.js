@@ -105,11 +105,11 @@ class RestaurantInfo {
     const image = document.querySelector('.restaurant-img');
     image.className = 'restaurant-img';
     image.src = DBHelper.imageUrlForRestaurant(
-      this.restaurant.photograph,
+      this.restaurant.photograph || this.restaurant.id,
       defaultSize
     );
     image.srcset = DBHelper.imageSrcsetForRestaurant(
-      this.restaurant.photograph,
+      this.restaurant.photograph || this.restaurant.id,
       imgSizes
     );
     image.sizes = '(min-width: 632px) 600px, 100vw';
