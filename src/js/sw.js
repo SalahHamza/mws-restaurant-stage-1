@@ -122,15 +122,8 @@ addEventListener('fetch', event => {
   event.respondWith(async function() {
     const cachedResponse = await caches.match(event.request);
     if(cachedResponse) return cachedResponse;
-    try {
-      return await fetch(event.request);
-    } catch (err) {
-      if (event.request.url.includes('.jpg')) {
-        /* If no cache match for the image,
-          return offline image */
-        return await caches.match('./assets/offline.png');
-      }
-    }
+
+    return fetch(event.request);
   }());
 });
 
