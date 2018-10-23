@@ -1,5 +1,6 @@
 import '@babel/polyfill';
 import idb from 'idb';
+import IndexController from './indexController';
 
 /*
  Change this to your base url in local env
@@ -19,6 +20,8 @@ const BASE_URL = (() => {
 class DBHelper {
   constructor() {
     this.idbPromise = this.openDatabase();
+    // initilizing indexController (register service worker)
+    new IndexController().init();
   }
   /**
    * Fetch MAPBOX Token from DB instead of including

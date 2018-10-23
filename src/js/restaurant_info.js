@@ -1,5 +1,4 @@
 import DBHelper from './dbhelper';
-import IndexController from './indexController';
 
 class RestaurantInfo {
   constructor() {
@@ -278,6 +277,6 @@ class RestaurantInfo {
 
 (() => {
   const inside = new RestaurantInfo();
+  // initializing restaurant_info page
   inside.init();
-  new IndexController(document.body).init();
 })();

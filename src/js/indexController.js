@@ -1,8 +1,8 @@
 import Snackbars from '@salahhamza/snackbars';
 
 class IndexController {
-  constructor(container) {
-    this.snackbars = new Snackbars(container, true);
+  constructor() {
+    this.snackbars = new Snackbars(null, true);
   }
 
   init() {

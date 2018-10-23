@@ -1,5 +1,4 @@
 import DBHelper from './dbhelper';
-import IndexController from './indexController';
 
 class MainPage {
   constructor() {
@@ -252,6 +251,6 @@ class MainPage {
 
 (() => {
   const main = new MainPage();
+  // initializing main page
   main.init();
-  new IndexController(document.body).init();
 })();
