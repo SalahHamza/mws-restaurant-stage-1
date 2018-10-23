@@ -7,6 +7,7 @@ dotenv.config();
  * of that path when we we need to
  */
 module.exports = {
+  // globs and paths start
   destBase: 'app/',
   styles: {
     src: ['src/css/styles.css', 'node_modules/@salahhamza/snackbars/lib/snackbar.css'],
@@ -38,7 +39,7 @@ module.exports = {
     src: ['src/js/**/*.js','!node_modules/**']
   },
   imgs: {
-    src: ['src/img/**', '!src/img/offline.png'],
+    src: ['src/img/**', '!src/img/offline.png', '!src/img/rating.png'],
     dest: 'app/assets/img',
     revDest: 'assets/img',
     // widths to generate images
@@ -67,6 +68,9 @@ module.exports = {
     dest: 'app/',
     path: 'app/rev-manifest.json'
   },
+  // globs and paths end
+
+  // webpack config start
   webpack: {
     output: {
       filename: '[name].js'
@@ -91,6 +95,7 @@ module.exports = {
       ]
     }
   },
+  // webpack config end
   toCache: [
     './assets/js/inside.js',
     './assets/js/main.js',
