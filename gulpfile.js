@@ -172,10 +172,18 @@ gulp.task('copy-data', () => {
     .pipe(gulp.dest(config.data.dest));
 });
 
-gulp.task('copy-html', () => {
-  return gulp.src(config.html.src)
-    .pipe(gulp.dest(config.html.dest));
-});
+
+
+gulp.task('copy-html', gulp.series(() => {
+  // since webpack doesn't run without entry point
+  // we are running this with a dummy file
+  // and deleting it at the end of the task
+  return gulp.src(config.blank.src)
+    .pipe(webpack(config.webpackPWA))
+    .pipe(gulp.dest(config.destBase));
+}, (cb) => {
+  rimraf(config.blank.filename, cb);
+}));
 
 
 /**
@@ -287,8 +295,8 @@ gulp.task('build', gulp.series(
   cb => {
     rimraf(config.destBase, cb);
   },
+  'copy-html',
   gulp.parallel(
-    'copy-html',
     // linting before running any tasks on scripts
     gulp.series('lint', 'rev-rewrite'),
     'sw-rev',

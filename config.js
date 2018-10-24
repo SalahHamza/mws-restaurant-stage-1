@@ -1,6 +1,8 @@
 /*global process __dirname:true*/
 const path = require('path');
 const dotenv = require('dotenv');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const WebpackPwaManifest = require('webpack-pwa-manifest');
 dotenv.config();
 
 /**
@@ -92,11 +94,16 @@ const globsAndPaths = {
   revManifest: {
     dest: 'app/',
     path: 'app/rev-manifest.json'
+  },
+  blank: {
+    src: './src/js/blank.js',
+    filename: 'app/blank.js'
   }
 };
 
 /* =========== webpack config: start =========== */
 
+// webpack configuration object for script bundling
 const webpackConfig = {
   entry : {
     inside: path.join(__dirname, globsAndPaths.js.inside.entry),
@@ -126,6 +133,63 @@ const webpackConfig = {
   }
 };
 
+// pwa manifest.json config object
+const manifestConfig = {
+  filename: './manifest.json',
+  fingerprints: false,
+  name: 'Restaurant Reviews',
+  short_name: 'RR',
+  description: 'Restaurant Reviews Progressive Web App',
+  background_color: '#252831',
+  theme_color: '#252831',
+  icons: [
+    {
+      src: path.resolve(globsAndPaths.imgs.icons.src),
+      sizes: globsAndPaths.imgs.icons.sizes, // multiple sizes
+      destination: path.join(globsAndPaths.imgs.icons.dest),
+    }
+  ],
+  includeDirectory: false,
+  inject: true
+};
+
+// configration for the HtmlWebpackPlugin
+const htmlPluginConfig = {
+  // excluding this chunck so that the plugin
+  // doesn't inject a script tag for it
+  excludeChunks: ['blank'],
+  meta: {
+    description: manifestConfig.description
+  },
+  // a custome template parameter to inject
+  // the <link> tag for the icon
+  relIcon: globsAndPaths.imgs.icons.tag()
+};
+
+const webpackPWAConfig = {
+  // since webpack doesn't run without entry point
+  // we are specifing the index.js as an entry point
+  // but it will be overwritten later when the
+  // sw-rev task runs
+  entry: {
+    blank: globsAndPaths.blank.src
+  },
+  output: {
+    filename: '[name].js'
+  },
+  plugins: [
+    // running the plugin for both .html files
+    new HtmlWebpackPlugin(Object.assign(htmlPluginConfig, {
+      template: 'src/templates/index.html',
+      filename: 'index.html',
+    })),
+    new HtmlWebpackPlugin(Object.assign(htmlPluginConfig, {
+      template: 'src/templates/restaurant.html',
+      filename: 'restaurant.html',
+    })),
+    new WebpackPwaManifest(manifestConfig)
+  ],
+};
 
 /* =========== webpack config: end =========== */
 
@@ -143,4 +207,7 @@ const other = {
   }
 };
 
-module.exports = Object.assign(globsAndPaths, { webpack: webpackConfig }, other);
+module.exports = Object.assign(globsAndPaths, {
+  webpack: webpackConfig,
+  webpackPWA: webpackPWAConfig
+}, other);
