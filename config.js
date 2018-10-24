@@ -204,7 +204,8 @@ const other = {
   mapboxKey: process.env.MAPBOX_TOKEN,
   get devURL() {
     return `localhost:${this.port}`;
-  }
+  },
+  mapboxSecret: process.env.API_KEY_SECRET
 };
 
 module.exports = Object.assign(globsAndPaths, {
