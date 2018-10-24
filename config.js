@@ -1,12 +1,13 @@
 /*global process:true*/
 const dotenv = require('dotenv');
 dotenv.config();
+
 /**
  * abstracting away configuration for every task
  * so that we don't have to change every occurence
  * of that path when we we need to
  */
-module.exports = {
+const globsAndPaths = {
   // globs and paths start
   destBase: 'app/',
   styles: {
@@ -67,35 +68,41 @@ module.exports = {
   revManifest: {
     dest: 'app/',
     path: 'app/rev-manifest.json'
-  },
-  // globs and paths end
+  }
+};
 
-  // webpack config start
-  webpack: {
-    output: {
-      filename: '[name].js'
-    },
-    devtool: 'source-map',
-    module: {
-      rules: [
-        {
-          test: /\.m?js$/,
-          exclude: /(node_modules|bower_components)/,
-          use: {
-            loader: 'babel-loader',
-            options: {
-              presets: [
-                ['@babel/preset-env', {
-                  useBuiltIns: 'entry'
-                }]
-              ]
-            }
+/* =========== webpack config: start =========== */
+
+const webpackConfig = {
+  output: {
+    filename: '[name].js'
+  },
+  devtool: 'source-map',
+  module: {
+    rules: [
+      {
+        test: /\.m?js$/,
+        exclude: /(node_modules|bower_components)/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: [
+              ['@babel/preset-env', {
+                useBuiltIns: 'entry'
+              }]
+            ]
           }
         }
-      ]
-    }
-  },
-  // webpack config end
+      }
+    ]
+  }
+};
+
+
+/* =========== webpack config: end =========== */
+
+
+const other = {
   toCache: [
     './assets/js/inside.js',
     './assets/js/main.js',
@@ -107,3 +114,5 @@ module.exports = {
     return `localhost:${this.port}`;
   }
 };
+
+module.exports = Object.assign(globsAndPaths, { webpack: webpackConfig }, other);
