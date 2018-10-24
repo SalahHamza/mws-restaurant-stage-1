@@ -1,4 +1,5 @@
-/*global process:true*/
+/*global process __dirname:true*/
+const path = require('path');
 const dotenv = require('dotenv');
 dotenv.config();
 
@@ -74,6 +75,10 @@ const globsAndPaths = {
 /* =========== webpack config: start =========== */
 
 const webpackConfig = {
+  entry : {
+    inside: path.join(__dirname, globsAndPaths.js.inside.entry),
+    main: path.join(__dirname, globsAndPaths.js.main.entry)
+  },
   output: {
     filename: '[name].js'
   },

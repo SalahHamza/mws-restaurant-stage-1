@@ -1,4 +1,3 @@
-/*global __dirname:true*/
 /*=========== external ===========*/
 const
   gulp = require('gulp'),
@@ -34,7 +33,6 @@ const
 // config contains all file build paths, image sizes and other stuff
 const config = require('./config');
 const pkg = require('./package.json');
-const path = require('path');
 
 /******************
     Styles tasks
@@ -91,14 +89,7 @@ gulp.task('lint', () => {
 const bundleScripts = (mode = 'production') => {
   return () => {
     return gulp.src(config.js.main.entry)
-      .pipe(webpack(
-        Object.assign({}, {
-          entry : {
-            inside: path.join(__dirname, config.js.inside.entry),
-            main: path.join(__dirname, config.js.main.entry)
-          },
-          mode
-        }, config.webpack)))
+      .pipe(webpack(Object.assign(config.webpack, { mode })))
       .pipe(gulp.dest(config.js.dest));
   };
 };
