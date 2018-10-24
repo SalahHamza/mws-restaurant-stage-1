@@ -1,4 +1,4 @@
-/*global __dirname :true*/
+/*global __dirname Buffer:true*/
 
 const
   fs = require('fs'),
@@ -93,6 +93,26 @@ router.get('/sw.js', (req, res) => {
 router.get(['/manifest.json','/rev-manifest.json'], (req, res) => {
   const readStream = fs.createReadStream(path.join(__dirname, '/../app/', req.path));
   readStream.pipe(res);
+});
+
+
+/**
+ * route for api_key, it is not completely secured
+ * but it won't show on the client unless the
+ * auth header is set with the secret
+ */
+router.get('/mapbox_api_key', (req, res) => {
+  // checking if there are credentials
+  if (!req.headers.authorization) {
+    return res.json({ error: 'No credentials sent!' });
+  }
+  // extraction secret
+  const encoded = req.headers.authorization.split(' ')[1];
+  const decoded = new Buffer(encoded, 'base64').toString('utf8');
+  if(decoded !== config.mapboxSecret) {
+    return res.json({ error: 'Credentials are not correct!' });
+  }
+  res.json({MAPBOX_TOKEN: config.mapboxKey});
 });
 
 module.exports = router;
