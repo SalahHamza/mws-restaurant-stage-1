@@ -81,7 +81,7 @@ const globsAndPaths = {
           href="${path.join(this.dest, `icon_${sizeString}.png`)}">`;
       },
       // return the icon paths to cache in the service worker
-      toCache() {
+      get toCache() {
         return this.sizes
           .map(size => path.join(this.dest, `icon_${size}x${size}.png`));
       }
