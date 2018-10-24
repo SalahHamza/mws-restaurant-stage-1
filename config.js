@@ -69,7 +69,7 @@ const globsAndPaths = {
       src: 'src/img/rating.png',
       // specifying the full relative path because
       // icons will be handled by webpack stream directly
-      dest: 'assets/img/icons',
+      dest: 'assets/icons',
       sizes: [192, 512],
       // return the link tag to reference to inject in html
       tag(size = 192) {
