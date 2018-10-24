@@ -22,6 +22,7 @@ const toCache = [
   './index.html',
   './restaurant',
   './restaurant.html',
+  './manifest.json',
   ...staticToCache,
   /* works as replacement for the server data */
   './assets/data/restaurants.json',
