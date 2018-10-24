@@ -57,9 +57,32 @@ const globsAndPaths = {
       {value: 1000, enlarge: true},
       {value: 1200, enlarge: true}
     ],
+    /* the offline fallback for images */
     offline: {
-      src: ['src/img/offline.png'],
+      src: 'src/img/offline.png',
       dest: 'app/assets'
+    },
+    /* the icons used in the pwa and as favicon */
+    icons: {
+      src: 'src/img/rating.png',
+      // specifying the full relative path because
+      // icons will be handled by webpack stream directly
+      dest: 'assets/img/icons',
+      sizes: [192, 512],
+      // return the link tag to reference to inject in html
+      tag(size = 192) {
+        if(!this.sizes.includes(size)) throw new Error('Icon is not generated for this size');
+
+        const sizeString = `${size}x${size}`;
+        return `<link rel="shortcut icon"
+          sizes="${sizeString}"
+          href="${path.join(this.dest, `icon_${sizeString}.png`)}">`;
+      },
+      // return the icon paths to cache in the service worker
+      toCache() {
+        return this.sizes
+          .map(size => path.join(this.dest, `icon_${size}x${size}.png`));
+      }
     }
   },
   data: {
