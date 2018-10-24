@@ -27,13 +27,28 @@ class DBHelper {
    * Fetch MAPBOX Token from DB instead of including
    * it in the script
    */
-  static fetchMAPBOXToken() {
-    return fetch(`${BASE_URL}/assets/data/restaurants.json`)
-      .then(res => res.json())
-      .then(data => data.MAPBOX_TOKEN)
-      .catch(err => {
-        console.log(err);
-      });
+  // static fetchMAPBOXToken() {
+  //   return fetch(`${BASE_URL}/assets/data/restaurants.json`)
+  //     .then(res => res.json())
+  //     .then(data => data.MAPBOX_TOKEN)
+  //     .catch(err => {
+  //       console.log(err);
+  //     });
+  // }
+  static async fetchMAPBOXToken() {
+    const headers = new Headers({
+      'Authorization': `Basic ${btoa('apiKeyId:Mapbox')}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    });
+    try {
+      const res = await fetch('/mapbox_api_key', { headers });
+      const key = await res.json();
+      console.log(key);
+      return key.MAPBOX_TOKEN;
+    } catch(err) {
+      console.log('data wasn\'t fetched');
+      return Promise.resolve();
+    }
   }
 
   /**
