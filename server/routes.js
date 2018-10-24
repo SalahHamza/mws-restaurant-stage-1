@@ -59,15 +59,22 @@ router.get('/sw.js', (req, res) => {
   let toCache = [];
   try {
     const revManifest = JSON.parse(fs.readFileSync(`${__dirname}/../${config.revManifest.path}`));
-    toCache = Object.keys(revManifest)
+    // adding fingerprinted filenames to the cached files array
+    Object.keys(revManifest)
       .filter(filename => !filename.endsWith('.map'))
       // returning relative paths './../..'
-      .map(filename => `./${revManifest[filename]}`);
+      .forEach(filename => {
+        toCache.push(`./${revManifest[filename]}`);
+      });
   } catch(err) {
     // in development the rev-manifest.json file doesn't exist
     // so fallback to the non-fingerprinted filenames
     toCache = config.toCache;
   }
+  // adding the generated icons to the cached files array
+  config.imgs.icons.toCache.forEach(icon => {
+    toCache.push(icon);
+  });
 
   input
     // static-module gives access to functions
