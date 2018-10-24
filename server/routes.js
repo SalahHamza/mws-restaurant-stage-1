@@ -9,6 +9,7 @@ const
 const express = require('express');
 const router = express.Router();
 
+
 /*
  In order to have a good cache policy, maxAge of 1year has been
  given to static assets, but there won't be any conflicts since
@@ -20,6 +21,7 @@ const router = express.Router();
  https://medium.com/pixelpoint/best-practices-for-cache-control-settings-for-your-website-ff262b38c5a2
 */
 router.use('/assets', express.static(path.join(__dirname, '../app/assets'), {maxAge: '1y'}));
+
 // Set default caching headers
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-cache');
@@ -78,11 +80,11 @@ router.get('/sw.js', (req, res) => {
     .pipe(res);
 });
 
-// between hard coding a new route and installing serve-static
-// and setting max-age=0 for /rev-manifest.json, 3 lines of code
-// is less costy
-router.get('/rev-manifest.json', (req, res) => {
-  const readStream = fs.createReadStream(`${__dirname}/../app/rev-manifest.json`);
+// these two files are not within the scope of the
+// public directory '/assets', so we need to serve them
+// TODO: Find an alternative!
+router.get(['/manifest.json','/rev-manifest.json'], (req, res) => {
+  const readStream = fs.createReadStream(path.join(__dirname, '/../app/', req.path));
   readStream.pipe(res);
 });
 
