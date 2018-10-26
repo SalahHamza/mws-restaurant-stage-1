@@ -63,41 +63,41 @@ router.get(['/restaurant', '/restaurant.html'], (req, res) => {
   NOTE: The memory cache is cleared on server's
   close event
 */
-const cacheToCacheMiddleware = (req, res, next) => {
-  const toCacheKey = 'sw-toCache';
-  const cachedBody = memCache.get(toCacheKey);
-  if(cachedBody) {
-    res.toCache = cachedBody;
-    next();
-  }
-  const toCache = [];
-  try {
-    const revManifest = JSON
-      .parse(fs.readFileSync(`${__dirname}/../${config.revManifest.path}`));
-
-    // adding fingerprinted filenames to the cached files array
-    const revedFilenames = Object.values(revManifest)
-      .filter(filename => !filename.endsWith('.map'));
-
-    for(const filename of revedFilenames) {
-      toCache.push(`./${filename}`);
+const cacheToCacheMiddleware = (duration) => {
+  return (req, res, next) => {
+    const toCacheKey = 'sw-toCache';
+    const cachedBody = memCache.get(toCacheKey);
+    if(cachedBody) {
+      res.toCache = cachedBody;
+      return next();
     }
-  } catch(err) {
-    // in development the rev-manifest.json file doesn't exist
-    // so fallback to the non-fingerprinted filenames
-    for(const filename of config.toCache) {
-      toCache.push(filename);
+    const toCache = [];
+    try {
+      const revManifest = JSON
+        .parse(fs.readFileSync(`${__dirname}/../${config.revManifest.path}`));
+
+      // adding fingerprinted filenames to the cached files array
+      const revedFilenames = Object.values(revManifest)
+        .filter(filename => !filename.endsWith('.map'));
+
+      for(const filename of revedFilenames) {
+        toCache.push(`./${filename}`);
+      }
+    } catch(err) {
+      // in development the rev-manifest.json file doesn't exist
+      // so fallback to the non-fingerprinted filenames
+      for(const filename of config.toCache) {
+        toCache.push(filename);
+      }
     }
-  }
-  // adding the generated icons to the cached files array
-  for(const icon of config.imgs.icons.toCache) {
-    toCache.push(icon);
-  }
-  memCache.put(toCacheKey, toCache);
-  if(!cachedBody) {
+    // adding the generated icons to the cached files array
+    for(const icon of config.imgs.icons.toCache) {
+      toCache.push(`./${icon}`);
+    }
     res.toCache = toCache;
+    memCache.put(toCacheKey, toCache, duration*1000);
     next();
-  }
+  };
 };
 
 
@@ -106,7 +106,7 @@ const cacheToCacheMiddleware = (req, res, next) => {
  streaming service worker
  https://www.youtube.com/watch?v=3Tr-scf7trE&index=99&list=WL&t=1286s
 */
-router.get('/sw.js', cacheToCacheMiddleware, (req, res) => {
+router.get('/sw.js', cacheToCacheMiddleware(1*60*60), (req, res) => {
   const input = fs.createReadStream(`${__dirname}/../app/sw.js`);
   /*
     since service workers have strict
