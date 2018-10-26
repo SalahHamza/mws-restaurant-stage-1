@@ -19,7 +19,7 @@ const BASE_URL = (() => {
  */
 class DBHelper {
   constructor() {
-    this.idbPromise = this.openDatabase();
+    this.openDatabase();
     // initilizing indexController (register service worker)
     new IndexController().init();
   }
@@ -27,14 +27,6 @@ class DBHelper {
    * Fetch MAPBOX Token from DB instead of including
    * it in the script
    */
-  // static fetchMAPBOXToken() {
-  //   return fetch(`${BASE_URL}/assets/data/restaurants.json`)
-  //     .then(res => res.json())
-  //     .then(data => data.MAPBOX_TOKEN)
-  //     .catch(err => {
-  //       console.log(err);
-  //     });
-  // }
   static async fetchMAPBOXToken() {
     const headers = new Headers({
       'Authorization': `Basic ${btoa('apiKeyId:Mapbox')}`,
@@ -72,26 +64,13 @@ class DBHelper {
       return Promise.resolve();
     }
 
-    const idbPromise = idb.open('reviews-app', 1, upgradeDb => {
+    this.idbPromise = idb.open('reviews-app', 1, upgradeDb => {
       const store = upgradeDb.createObjectStore('restaurants', {
         keyPath: 'id'
       });
       store.createIndex('by-cuisine', 'cuisine_type');
       store.createIndex('by-neighborhood', 'neighborhood');
     });
-
-    // fetch and store restaurants right after
-    // creating the IDB
-    const db = await idbPromise;
-    this.fetchRestaurants((error, restaurants) => {
-      if (error) return;
-      const tx = db.transaction('restaurants', 'readwrite');
-      const store = tx.objectStore('restaurants');
-      for (const restaurant of restaurants) {
-        store.put(restaurant);
-      }
-    });
-    return idbPromise;
   }
 
   /**
