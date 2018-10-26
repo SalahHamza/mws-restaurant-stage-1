@@ -114,6 +114,17 @@ class DBHelper {
       const res = await fetch(`${DBHelper.DATABASE_URL}?id=${id}`);
       const restaurant = await res.json();
       callback(null, restaurant);
+
+      // add restaurant to IDB (or update it already exists)
+      const db = await this.idbPromise;
+      if(!db) return;
+
+      const tx = db.transaction('restaurants', 'readwrite');
+      const store = tx.objectStore('restaurants');
+      // get restaurant with this 'id'
+      await store.put(restaurant);
+      return tx.complete;
+
     } catch(err) {
       const db = await this.idbPromise;
       if(!db) return;
