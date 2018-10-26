@@ -3,7 +3,6 @@
 /.vscode
 TODOS.md
 .env
-package-lock.json
 
 ## SSL cert
 server.crt
