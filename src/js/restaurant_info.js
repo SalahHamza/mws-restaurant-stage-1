@@ -28,7 +28,6 @@ class RestaurantInfo {
           id: 'mapbox.streets'
         }).addTo(this.newMap);
 
-        this.fillBreadcrumb();
         DBHelper.mapMarkerForRestaurant(this.restaurant, this.newMap);
       }
     });
@@ -41,25 +40,29 @@ class RestaurantInfo {
   fetchRestaurantFromURL(callback) {
     if (this.restaurant) { // restaurant already fetched!
       callback(null, this.restaurant);
+      this.fillBreadcrumb();
       return;
     }
+
     const id = this.getParameterByName('id');
     if (!id) { // no id found in URL
       const error = 'No restaurant id in URL';
       this.handleRestaurantNotFound();
       callback(error, null);
-    } else {
-      this.dbHelper.fetchRestaurantById(id, (error, restaurant) => {
-        this.restaurant = restaurant;
-        if (!restaurant) {
-          console.error(error);
-          this.handleRestaurantNotFound();
-          return;
-        }
-        this.fillRestaurantHTML();
-        callback(null, restaurant);
-      });
+      return;
     }
+
+    this.dbHelper.fetchRestaurantById(id, (error, restaurant) => {
+      if (!restaurant) {
+        callback(error, null);
+        this.handleRestaurantNotFound();
+        return;
+      }
+      this.restaurant = restaurant;
+      this.fillBreadcrumb();
+      this.fillRestaurantHTML();
+      callback(null, restaurant);
+    });
   }
 
 
