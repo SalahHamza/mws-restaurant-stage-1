@@ -102,6 +102,7 @@ No tests available.
 * [npm](https://npmjs.com) - Dependency Management
 * [https://gulpjs.com/](Gulp) - Used task runner
 * [https://babeljs.io/](Babel) - Used to compile ES2015 to ES5
+* Rating icon from [Freepik](http://www.freepik.com) is licensed by [CC 3.0 BY](http://creativecommons.org/licenses/by/3.0/).
 
 ## Code Owners
 
