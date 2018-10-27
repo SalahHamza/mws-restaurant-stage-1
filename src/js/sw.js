@@ -27,9 +27,9 @@ const toCache = [
   /* will work as replacement to images */
   './assets/offline.png',
   /* Caching map assets */
-  'https://unpkg.com/leaflet@1.3.1/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.3.1/dist/leaflet.js',
-  'https://unpkg.com/leaflet@1.3.1/dist/images/marker-icon.png',
+  // 'https://unpkg.com/leaflet@1.3.1/dist/leaflet.css',
+  // 'https://unpkg.com/leaflet@1.3.1/dist/leaflet.js',
+  // 'https://unpkg.com/leaflet@1.3.1/dist/images/marker-icon.png',
   /* Cashing font face */
   'https://fonts.googleapis.com/css?family=Lato:400,700'
 ];
@@ -81,6 +81,7 @@ https://www.youtube.com/watch?v=3Tr-scf7trE&t=2018s
 
 NOTE: Caching everything that comes from the MAPBOX API is not
 a good idea since the content size increases quickly
+(kept it to work on it later - commented)
 
 */
 addEventListener('fetch', event => {
@@ -113,10 +114,11 @@ addEventListener('fetch', event => {
   }
 
   // if the request is for an MAPBOX asset
-  if (requestUrl.origin === 'https://api.tiles.mapbox.com') {
-    event.respondWith(fetchAndUpdateCacheThenRespond(event.request, mapCacheName));
-    return;
-  }
+  // if (requestUrl.origin === 'https://api.tiles.mapbox.com') {
+  //   event.respondWith(fetchAndUpdateCacheThenRespond(event.request, mapCacheName));
+  //   return;
+  // }
+
   // other requests
   event.respondWith(async function() {
     const cachedResponse = await caches.match(event.request);
@@ -149,18 +151,18 @@ addEventListener('message', event => {
  * @param {string} cacheName - Cache name to cache data in
  * @returns {Object.<Response>} response object for the given request
  */
-async function fetchAndUpdateCacheThenRespond(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  // fetch data from network and update cache for that request
-  // if network fetch fails fallback to cache response
-  try {
-    const networkResponse = await fetch(request);
-    await cache.put(request, networkResponse.clone());
-    return networkResponse;
-  } catch(err) {
-    return await cache.match(request);
-  }
-}
+// async function fetchAndUpdateCacheThenRespond(request, cacheName) {
+//   const cache = await caches.open(cacheName);
+//   // fetch data from network and update cache for that request
+//   // if network fetch fails fallback to cache response
+//   try {
+//     const networkResponse = await fetch(request);
+//     await cache.put(request, networkResponse.clone());
+//     return networkResponse;
+//   } catch(err) {
+//     return await cache.match(request);
+//   }
+// }
 
 
 /*
