@@ -24,8 +24,6 @@ const toCache = [
   './restaurant.html',
   './manifest.json',
   ...staticToCache,
-  /* works as replacement for the server data */
-  './assets/data/restaurants.json',
   /* will work as replacement to images */
   './assets/offline.png',
   /* Caching map assets */

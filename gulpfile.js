@@ -167,13 +167,6 @@ gulp.task('build:images', gulp.parallel('copy-images', 'optimize-images'));
     Copy tasks
 ******************/
 
-gulp.task('copy-data', () => {
-  return gulp.src(config.data.src)
-    .pipe(gulp.dest(config.data.dest));
-});
-
-
-
 gulp.task('copy-html', gulp.series(() => {
   // since webpack doesn't run without entry point
   // we are running this with a dummy file
@@ -300,8 +293,7 @@ gulp.task('build', gulp.series(
     // linting before running any tasks on scripts
     gulp.series('lint', 'rev-rewrite'),
     'sw-rev',
-    'build:images',
-    'copy-data'
+    'build:images'
   )
 ));
 
@@ -317,7 +309,6 @@ exports.default = gulp.series(
     'copy-html',
     'build:images',
     'styles',
-    'copy-data',
     gulp.series(
       'lint',
       'scripts'
