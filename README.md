@@ -25,6 +25,21 @@ and the dev server
 git clone https://github.com/SalahHamza/mws-restaurant-stage-2.git
 ```
 
+The `mws-restaurant-stage-1/` app depends on some environment variables, make sure to change to the aforementioned directory and create a `.env`:
+```
+$ cd mws-restaurant-stage-1
+$ touch .env
+```
+Open the file and fill it with these variables:
+```
+# mapbox api key (required)
+MAPBOX_TOKEN=
+# port to spin up the server (not required)
+PORT=3000
+# the api secret (required)
+API_KEY_SECRET=apiKeyId:Mapbox
+```
+
 ### Installing
 
 #### Install dependencies
