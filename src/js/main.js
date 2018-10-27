@@ -201,7 +201,6 @@ class MainPage {
       id: 'mapbox.streets'
     }).addTo(this.newMap);
 
-    this.updateRestaurants();
   }
 
 
@@ -236,6 +235,7 @@ class MainPage {
       });
       this.fetchNeighborhoods();
       this.fetchCuisines();
+      this.updateRestaurants();
 
       /* listen for select elements and update Restaurants */
       document.querySelector('.filter-options').addEventListener('change',(e) => {
