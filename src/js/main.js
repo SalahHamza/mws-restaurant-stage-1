@@ -229,7 +229,7 @@ class MainPage {
     /**
      * Fetch neighborhoods and cuisines as soon as the page is loaded.
      */
-    document.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', () => {
       DBHelper.fetchMAPBOXToken().then(mapboxToken => {
         this.initMap(mapboxToken); // added
       });
