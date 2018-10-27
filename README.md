@@ -8,25 +8,44 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-You first need a copy of the code in your local machine, make sure to fork and clone, you can clone by running this command:
+You first need a copy of the code in your local machine, make sure to fork and clone, you can clone by running this command.
 
+Create a directory where the app resides (name it whatever you'd like)
 ```
-git clone -b gulp https://github.com/SalahHamza/mws-restaurant-stage-1.git
+mkdir restaurant-app && cd restaurant-app
 ```
 
-**Note**: as this is not the master branch the command above have the '-b' flag with the specific branch.
+Clone the app
+```
+git clone https://github.com/SalahHamza/mws-restaurant-stage-1.git
+```
+
+and the dev server
+```
+git clone https://github.com/SalahHamza/mws-restaurant-stage-2.git
+```
 
 ### Installing
 
-To get up and running all you need to do is install the development dependencies. You can do that by running:
+#### Install dependencies
 
+To get up and running all you need to do is install the dependencies for both client side of the app and dev server.
+
+Go to each directory and run:
 ```
 npm install
 ```
 
-**Note**: Make sure you are inside the project directory.
+or you can do that from the directory you created like this:
+```
+$ (cd mws-restaurant-stage-1 && npm install)
+$ (cd mws-restaurant-stage-2 && npm install)
+```
+**Note**: the parentheses denotes a subshell.
 
-After that make sure to run Gulp in order to generate the needed assests.
+#### Run task runner
+
+After that make sure to run Gulp in order to generate the needed assests (stylesheets, images, js, ...etc).
 
 Run the build task to generate files for production
 
@@ -40,26 +59,39 @@ Run the default task to generate files + live editing (with browser-sync):
 gulp
 ```
 
-There is a specific production and development task for each kind of asset (not all). Production and development tasks have the same name, production have a trailing `-prod`:
+Note: browsersync is used with proxy, so make sure to spin up the server.
 
-* `gulp styles` & `gulp styles-prod`: for stylesheets.
-* `gulp scripts` & `gulp scripts-prod`: for stylesheets.
-* `gulp optimize-images`: for images. As the pages need different image for different viewport, images need to be optimized even in development.
-* `gulp copy-html`: for html files
-* `gulp copy-data`: for .json data file (temporary)
-* `gulp dev`: starts up the browser-sync dev server.
+**Note**: Make sure you run the tasks in the root directory or run the command with parentheses.
 
-After that make sure to start up the server:
+#### Start servers
 
-I. The easiest way to serve files is through browser-sync, run
+Spin up the dev server, make sure you are in the `mws-restaurant-stage-2/` directory:
 
 ```
-gulp dev
+$ cd mws-restaurant-stage-2/
+$ node app.js
+```
+or just do it from the root directory of the project:
+```
+(cd mws-restaurant-stage-2 && node app.js)
 ```
 
-II. The best way is to run the node http/2 server (server.js), you first need to have a SSL cert, but you can just make a self-signed SSL cert. Follow this link to know [how to make a self-signed cert](https://webapplog.com/http2-node/) and other details, or (unfortunately) the http/2 server won't work.
+And client side server. Remember you need to be within the `mws-restaurant-stage-1/` directory:
+```
+npm run serve
+```
+or
+```
+(cd mws-restaurant-stage-1 && npm run serve)
+```
 
-**Note**: Make sure you run the tasks in the root directory.
+**Note**:
+You can serve with http/2.
+```
+npm run serve -- --protocol=h2
+```
+But you first need to have a SSL cert, but you can just make a self-signed SSL cert. Follow this link to know [how to make a self-signed cert](https://webapplog.com/http2-node/) and other details, or (unfortunately) the http/2 server won't work.
+Also, service worker will not register with a self-signed, if you want to do so check this [stackover thread](https://stackoverflow.com/questions/38728176/can-you-use-a-service-worker-with-a-self-signed-certificate)
 
 ## Running the tests
 
