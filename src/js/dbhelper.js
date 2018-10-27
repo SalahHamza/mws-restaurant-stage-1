@@ -70,6 +70,15 @@ class DBHelper {
       });
       store.createIndex('by-cuisine', 'cuisine_type');
       store.createIndex('by-neighborhood', 'neighborhood');
+
+      // store for cuisines
+      upgradeDb.createObjectStore('cuisines', {
+        autoIncrement: true
+      });
+      // store for neighborhoods
+      upgradeDb.createObjectStore('neighborhoods', {
+        autoIncrement: true
+      });
     });
   }
 
@@ -246,8 +255,19 @@ class DBHelper {
    * Fetch all neighborhoods with proper error handling.
    */
   async fetchNeighborhoods(callback) {
+    const db = await this.idbPromise;
+    if(db) {
+      const tx = db.transaction('neighborhoods');
+      const store = tx.objectStore('neighborhoods');
+      // getting all restaurants with this cuisine_type
+      const neighborhoods = await store.getAll();
+      if(neighborhoods.length) {
+        callback(null, neighborhoods);
+        return tx.complete;
+      }
+    }
     // Fetch all restaurants
-    await this.fetchRestaurants((error, restaurants) => {
+    await this.fetchRestaurants(async (error, restaurants) => {
       if (error) {
         callback(error, null);
       } else {
@@ -256,6 +276,15 @@ class DBHelper {
         // Remove duplicates from neighborhoods
         const uniqueNeighborhoods = neighborhoods.filter((v, i) => neighborhoods.indexOf(v) == i);
         callback(null, uniqueNeighborhoods);
+
+        const db = await this.idbPromise;
+        if(!db) return;
+        const tx = db.transaction('neighborhoods', 'readwrite');
+        const store = tx.objectStore('neighborhoods');
+        for(const neighborhood of uniqueNeighborhoods) {
+          store.put(neighborhood);
+        }
+        return tx.complete;
       }
     });
   }
@@ -264,8 +293,19 @@ class DBHelper {
    * Fetch all cuisines with proper error handling.
    */
   async fetchCuisines(callback) {
+    const db = await this.idbPromise;
+    if(db) {
+      const tx = db.transaction('cuisines');
+      const store = tx.objectStore('cuisines');
+      // getting all restaurants with this cuisine_type
+      const cuisines = await store.getAll();
+      if(cuisines.length) {
+        callback(null, cuisines);
+        return tx.complete;
+      }
+    }
     // Fetch all restaurants
-    await this.fetchRestaurants((error, restaurants) => {
+    await this.fetchRestaurants(async (error, restaurants) => {
       if (error) {
         callback(error, null);
       } else {
@@ -274,6 +314,15 @@ class DBHelper {
         // Remove duplicates from cuisines
         const uniqueCuisines = cuisines.filter((v, i) => cuisines.indexOf(v) == i);
         callback(null, uniqueCuisines);
+
+        const db = await this.idbPromise;
+        if(!db) return;
+        const tx = db.transaction('cuisines', 'readwrite');
+        const store = tx.objectStore('cuisines');
+        for(const cuisine of uniqueCuisines) {
+          store.put(cuisine);
+        }
+        return tx.complete;
       }
     });
   }
