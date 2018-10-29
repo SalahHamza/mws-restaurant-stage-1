@@ -35,7 +35,6 @@ class DBHelper {
     try {
       const res = await fetch('/mapbox_api_key', { headers });
       const key = await res.json();
-      console.log(key);
       return key.MAPBOX_TOKEN;
     } catch(err) {
       console.log('data wasn\'t fetched');
@@ -91,25 +90,29 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
-      // fetchRestaurants method is called in the openDatabase
-      // method, but since inside openDatabase method
-      // this.idbPromise property is yet to be set, there won't be
-      // any conflic 'await undefined' yields 'undefined'
-      const db = await this.idbPromise;
-      if(!db) return;
+      let restaurants,
+        sentError = `Errors:\n${err.stack || err}`;
+      try {
+        // fetchRestaurants method is called in the openDatabase
+        // method, but since inside openDatabase method
+        // this.idbPromise property is yet to be set, there won't be
+        // any conflic 'await undefined' yields 'undefined'
+        const db = await this.idbPromise;
+        if(!db) return;
 
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants');
-      // get all restaurants
-      const restaurants = await store.getAll();
-
-      if(restaurants.length) {
-        callback(null, restaurants);
-        return tx.complete;
+        const tx = db.transaction('restaurants');
+        const store = tx.objectStore('restaurants');
+        // get all restaurants
+        restaurants = await store.getAll();
+      } catch(err) {
+        sentError += `\n${err.stack}`;
+      } finally {
+        if(restaurants && restaurants.length) {
+          callback(null, restaurants);
+        } else {
+          callback(sentError, null);
+        }
       }
-
-      callback(`Request failed. ${err}`, null);
-      return tx.complete;
     }
   }
 
@@ -124,31 +127,47 @@ class DBHelper {
       const restaurant = await res.json();
       callback(null, restaurant);
 
-      // add restaurant to IDB (or update it already exists)
-      const db = await this.idbPromise;
-      if(!db) return;
+      try {
+        // add restaurant to IDB (or update it already exists)
+        const db = await this.idbPromise;
+        if(!db) return;
 
-      const tx = db.transaction('restaurants', 'readwrite');
-      const store = tx.objectStore('restaurants');
-      // get restaurant with this 'id'
-      await store.put(restaurant);
-      return tx.complete;
+        const tx = db.transaction('restaurants', 'readwrite');
+        const store = tx.objectStore('restaurants');
+        // get restaurant with this 'id'
+        await store.put(restaurant);
+        return tx.complete;
+      } catch(err) {
+        // in this catch we don't need to throw, since the
+        // restaurant already been sent with in callback()
+        console.log(`Restaurant wasn't saved: ${err.stack || err}`);
+        return;
+      }
 
     } catch(err) {
-      const db = await this.idbPromise;
-      if(!db) return;
+      let restaurant,
+        sentError = `Errors:\n${err.stack || err}`;
+      // if fetch fails, get restaurant from IDB if it exists
+      // and if restaurant isn't in IDB send an error with the
+      // callback
+      try {
+        const db = await this.idbPromise;
+        if(!db) return;
 
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants');
-      // get restaurant with this 'id'
-      const restaurant = await store.get(Number(id));
+        const tx = db.transaction('restaurants');
+        const store = tx.objectStore('restaurants');
+        // get restaurant with this 'id'
+        restaurant = await store.get(Number(id));
 
-      if(restaurant) {
-        callback(null, restaurant);
-        return tx.complete;
+      } catch(error) {
+        sentError += `\n${error.stack}`;
+      } finally {
+        if(restaurant){
+          callback(null, restaurant);
+        } else {
+          callback(sentError, null);
+        }
       }
-      callback('Restaurant does not exist', null);
-      return tx.complete;
     }
   }
 
@@ -162,20 +181,29 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
-      const db = await this.idbPromise;
-      if(!db) return;
+      let restaurants,
+        sentError = `Errors:\n${err.stack || err}`;
+      try {
+        // fetchRestaurants method is called in the openDatabase
+        // method, but since inside openDatabase method
+        // this.idbPromise property is yet to be set, there won't be
+        // any conflic 'await undefined' yields 'undefined'
+        const db = await this.idbPromise;
+        if(!db) return;
 
-      const tx = db.transaction('restaurants');
-      const index = tx.objectStore('restaurants').index('by-cuisine');
-      // getting all restaurants with this cuisine_type
-      const restaurants = await index.getAll(cuisine);
-
-      if(restaurants) {
-        callback(null, restaurants);
-        return tx.complete;
+        const tx = db.transaction('restaurants');
+        const store = tx.objectStore('restaurants').index('by-cuisine');
+        // get all restaurants
+        restaurants = await store.getAll(cuisine);
+      } catch(error) {
+        sentError += `\n${error.stack || error}`;
+      } finally {
+        if(restaurants && restaurants.length) {
+          callback(null, restaurants);
+        } else {
+          callback(sentError, null);
+        }
       }
-      callback(err, null);
-      return tx.complete;
     }
   }
 
@@ -189,20 +217,29 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
-      const db = await this.idbPromise;
-      if(!db) return;
+      let restaurants,
+        sentError = `Errors:\n${err.stack}`;
+      try {
+        // fetchRestaurants method is called in the openDatabase
+        // method, but since inside openDatabase method
+        // this.idbPromise property is yet to be set, there won't be
+        // any conflic 'await undefined' yields 'undefined'
+        const db = await this.idbPromise;
+        if(!db) return;
 
-      const tx = db.transaction('restaurants');
-      const index = tx.objectStore('restaurants').index('by-neighborhood');
-      // getting all restaurants with this neighborhood
-      const restaurants = await index.getAll(neighborhood);
-
-      if(restaurants) {
-        callback(null, restaurants);
-        return tx.complete;
+        const tx = db.transaction('restaurants');
+        const store = tx.objectStore('restaurants').index('by-neighborhood');
+        // get all restaurants
+        restaurants = await store.getAll(neighborhood);
+      } catch(error) {
+        sentError += `\n${error.stack || error}`;
+      } finally {
+        if(restaurants && restaurants.length) {
+          callback(null, restaurants);
+        } else {
+          callback(sentError, null);
+        }
       }
-      callback(err, null);
-      return tx.complete;
     }
   }
 
@@ -212,17 +249,17 @@ class DBHelper {
   async fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, callback) {
     // Fetch all restaurants
     if(cuisine === 'all' && neighborhood === 'all') {
-      await this.fetchRestaurants(callback);
+      this.fetchRestaurants(callback);
       return;
     }
     // fetch by neighborhood
     if(cuisine === 'all') {
-      await this.fetchRestaurantByNeighborhood(neighborhood, callback);
+      this.fetchRestaurantByNeighborhood(neighborhood, callback);
       return;
     }
     // fetch by cuisine
     if(neighborhood === 'all') {
-      await this.fetchRestaurantByCuisine(cuisine, callback);
+      this.fetchRestaurantByCuisine(cuisine, callback);
       return;
     }
     // fetch by neighborhood & cuisine
@@ -231,23 +268,32 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
-      const db = await this.idbPromise;
-      if(!db) return;
+      let restaurants,
+        sentError = `Errors:\n${err.stack || err}`;
+      try {
+        // fetchRestaurants method is called in the openDatabase
+        // method, but since inside openDatabase method
+        // this.idbPromise property is yet to be set, there won't be
+        // any conflic 'await undefined' yields 'undefined'
+        const db = await this.idbPromise;
+        if(!db) return;
 
-      const tx = db.transaction('restaurants');
-      const index = tx.objectStore('restaurants').index('by-neighborhood');
+        const tx = db.transaction('restaurants');
+        const index = tx.objectStore('restaurants').index('by-neighborhood');
 
-      // getting all restaurants with this neighboorhood
-      let restaurants = await index.getAll(neighborhood);
-      // only keeping restaurants with this cuisine_type
-      restaurants = restaurants.filter(restaurant => restaurant.cuisine_type === cuisine);
-
-      if(restaurants) {
-        callback(null, restaurants);
-        return tx.complete;
+        // getting all restaurants with this neighboorhood
+        restaurants = await index.getAll(neighborhood);
+        // only keeping restaurants with this cuisine_type
+        restaurants = restaurants.filter(restaurant => restaurant.cuisine_type === cuisine);
+      } catch(error) {
+        sentError += `\n${error.stack || error}`;
+      } finally {
+        if(restaurants && restaurants.length) {
+          callback(null, restaurants);
+        } else {
+          callback(sentError, null);
+        }
       }
-      callback(err, null);
-      return tx.complete;
     }
   }
 
@@ -255,28 +301,36 @@ class DBHelper {
    * Fetch all neighborhoods with proper error handling.
    */
   async fetchNeighborhoods(callback) {
-    const db = await this.idbPromise;
-    if(db) {
-      const tx = db.transaction('neighborhoods');
-      const store = tx.objectStore('neighborhoods');
-      // getting all restaurants with this cuisine_type
-      const neighborhoods = await store.getAll();
-      if(neighborhoods.length) {
-        callback(null, neighborhoods);
-        return tx.complete;
+    try {
+      // fetching neighborhoods from IDB if they exist
+      const db = await this.idbPromise;
+      if(db) {
+        const tx = db.transaction('neighborhoods');
+        const store = tx.objectStore('neighborhoods');
+        // getting all restaurants with this cuisine_type
+        const neighborhoods = await store.getAll();
+        if(neighborhoods.length) {
+          callback(null, neighborhoods);
+          return tx.complete;
+        }
       }
+    } catch(err) {
+      console.log(err);
     }
-    // Fetch all restaurants
-    await this.fetchRestaurants(async (error, restaurants) => {
+    // Fetch all restaurants and extract neighborhoods
+    this.fetchRestaurants(async (error, restaurants) => {
       if (error) {
         callback(error, null);
-      } else {
-        // Get all neighborhoods from all restaurants
-        const neighborhoods = restaurants.map((v, i) => restaurants[i].neighborhood);
-        // Remove duplicates from neighborhoods
-        const uniqueNeighborhoods = neighborhoods.filter((v, i) => neighborhoods.indexOf(v) == i);
-        callback(null, uniqueNeighborhoods);
+        return;
+      }
+      // Get all neighborhoods from all restaurants
+      const neighborhoods = restaurants.map((v, i) => restaurants[i].neighborhood);
+      // Remove duplicates from neighborhoods
+      const uniqueNeighborhoods = neighborhoods.filter((v, i) => neighborhoods.indexOf(v) == i);
+      callback(null, uniqueNeighborhoods);
 
+      // add neighborhoods to IDB
+      try {
         const db = await this.idbPromise;
         if(!db) return;
         const tx = db.transaction('neighborhoods', 'readwrite');
@@ -285,6 +339,8 @@ class DBHelper {
           store.put(neighborhood);
         }
         return tx.complete;
+      } catch(err) {
+        console.log('Couldn\'t save neighborhoods to IDB: ', err);
       }
     });
   }
@@ -293,28 +349,34 @@ class DBHelper {
    * Fetch all cuisines with proper error handling.
    */
   async fetchCuisines(callback) {
-    const db = await this.idbPromise;
-    if(db) {
-      const tx = db.transaction('cuisines');
-      const store = tx.objectStore('cuisines');
-      // getting all restaurants with this cuisine_type
-      const cuisines = await store.getAll();
-      if(cuisines.length) {
-        callback(null, cuisines);
-        return tx.complete;
+    try {
+      const db = await this.idbPromise;
+      if(db) {
+        const tx = db.transaction('cuisines');
+        const store = tx.objectStore('cuisines');
+        // getting all restaurants with this cuisine_type
+        const cuisines = await store.getAll();
+        if(cuisines.length) {
+          callback(null, cuisines);
+          return tx.complete;
+        }
       }
+    } catch(err) {
+      console.log(err);
     }
-    // Fetch all restaurants
-    await this.fetchRestaurants(async (error, restaurants) => {
+    // Fetch all restaurants and extract cuisines
+    this.fetchRestaurants(async (error, restaurants) => {
       if (error) {
         callback(error, null);
-      } else {
-        // Get all cuisines from all restaurants
-        const cuisines = restaurants.map((v, i) => restaurants[i].cuisine_type);
-        // Remove duplicates from cuisines
-        const uniqueCuisines = cuisines.filter((v, i) => cuisines.indexOf(v) == i);
-        callback(null, uniqueCuisines);
+        return;
+      }
+      // Get all cuisines from all restaurants
+      const cuisines = restaurants.map((v, i) => restaurants[i].cuisine_type);
+      // Remove duplicates from cuisines
+      const uniqueCuisines = cuisines.filter((v, i) => cuisines.indexOf(v) == i);
+      callback(null, uniqueCuisines);
 
+      try {
         const db = await this.idbPromise;
         if(!db) return;
         const tx = db.transaction('cuisines', 'readwrite');
@@ -323,6 +385,8 @@ class DBHelper {
           store.put(cuisine);
         }
         return tx.complete;
+      } catch(err) {
+        console.log('Couldn\'t save cuisines to IDB:', err);
       }
     });
   }
