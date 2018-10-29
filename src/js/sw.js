@@ -1,11 +1,9 @@
 // the version will be replaced in the build step
 const version = '<<-!version->>';
 const staticCacheName  = `reviews-app--static-${version}`;
-const mapCacheName = 'reviews-app--mapAPI';
 const contentImgsCacheName = 'reviews-app--content-imgs';
 const allCaches = [
   staticCacheName,
-  mapCacheName,
   contentImgsCacheName
 ];
 
@@ -26,10 +24,6 @@ const toCache = [
   ...staticToCache,
   /* will work as replacement to images */
   './assets/offline.png',
-  /* Caching map assets */
-  // 'https://unpkg.com/leaflet@1.3.1/dist/leaflet.css',
-  // 'https://unpkg.com/leaflet@1.3.1/dist/leaflet.js',
-  // 'https://unpkg.com/leaflet@1.3.1/dist/images/marker-icon.png',
   /* Cashing font face */
   'https://fonts.googleapis.com/css?family=Lato:400,700'
 ];
@@ -113,12 +107,6 @@ addEventListener('fetch', event => {
     }
   }
 
-  // if the request is for an MAPBOX asset
-  // if (requestUrl.origin === 'https://api.tiles.mapbox.com') {
-  //   event.respondWith(fetchAndUpdateCacheThenRespond(event.request, mapCacheName));
-  //   return;
-  // }
-
   // other requests
   event.respondWith(async function() {
     const cachedResponse = await caches.match(event.request);
@@ -142,28 +130,6 @@ addEventListener('message', event => {
 
 
 /* ========== Helper functions ========== */
-
-/**
- * checks if online, fetch data from network,
- * updates cache and repond with data
- * if offline responds with cached data
- * @param {Object} request - The Request the browser intends to make
- * @param {string} cacheName - Cache name to cache data in
- * @returns {Object.<Response>} response object for the given request
- */
-// async function fetchAndUpdateCacheThenRespond(request, cacheName) {
-//   const cache = await caches.open(cacheName);
-//   // fetch data from network and update cache for that request
-//   // if network fetch fails fallback to cache response
-//   try {
-//     const networkResponse = await fetch(request);
-//     await cache.put(request, networkResponse.clone());
-//     return networkResponse;
-//   } catch(err) {
-//     return await cache.match(request);
-//   }
-// }
-
 
 /*
   pseudo code:
