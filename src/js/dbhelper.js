@@ -91,7 +91,7 @@ class DBHelper {
       callback(null, restaurants);
     } catch(err) {
       let restaurants,
-        sentError = `Errors:\n${err.stack || err}`;
+        sentError = `Errors:\n${err}`;
       try {
         // fetchRestaurants method is called in the openDatabase
         // method, but since inside openDatabase method
@@ -104,12 +104,13 @@ class DBHelper {
         const store = tx.objectStore('restaurants');
         // get all restaurants
         restaurants = await store.getAll();
-      } catch(err) {
-        sentError += `\n${err.stack}`;
-      } finally {
         if(restaurants && restaurants.length) {
           callback(null, restaurants);
-        } else {
+        }
+      } catch(error) {
+        sentError += `\n${error}`;
+      } finally {
+        if(!restaurants || !restaurants.length) {
           callback(sentError, null);
         }
       }
@@ -140,13 +141,13 @@ class DBHelper {
       } catch(err) {
         // in this catch we don't need to throw, since the
         // restaurant already been sent with in callback()
-        console.log(`Restaurant wasn't saved: ${err.stack || err}`);
+        console.log(`Restaurant wasn't saved: \n${err}`);
         return;
       }
 
     } catch(err) {
       let restaurant,
-        sentError = `Errors:\n${err.stack || err}`;
+        sentError = `Errors:\n${err}`;
       // if fetch fails, get restaurant from IDB if it exists
       // and if restaurant isn't in IDB send an error with the
       // callback
@@ -160,7 +161,7 @@ class DBHelper {
         restaurant = await store.get(Number(id));
 
       } catch(error) {
-        sentError += `\n${error.stack}`;
+        sentError += `\n${error}`;
       } finally {
         if(restaurant){
           callback(null, restaurant);
@@ -182,7 +183,7 @@ class DBHelper {
       callback(null, restaurants);
     } catch(err) {
       let restaurants,
-        sentError = `Errors:\n${err.stack || err}`;
+        sentError = `Errors:\n${err}`;
       try {
         // fetchRestaurants method is called in the openDatabase
         // method, but since inside openDatabase method
@@ -196,7 +197,7 @@ class DBHelper {
         // get all restaurants
         restaurants = await store.getAll(cuisine);
       } catch(error) {
-        sentError += `\n${error.stack || error}`;
+        sentError += `\n${error}`;
       } finally {
         if(restaurants && restaurants.length) {
           callback(null, restaurants);
@@ -218,7 +219,7 @@ class DBHelper {
       callback(null, restaurants);
     } catch(err) {
       let restaurants,
-        sentError = `Errors:\n${err.stack}`;
+        sentError = `Errors:\n${err}`;
       try {
         // fetchRestaurants method is called in the openDatabase
         // method, but since inside openDatabase method
@@ -232,7 +233,7 @@ class DBHelper {
         // get all restaurants
         restaurants = await store.getAll(neighborhood);
       } catch(error) {
-        sentError += `\n${error.stack || error}`;
+        sentError += `\n${error}`;
       } finally {
         if(restaurants && restaurants.length) {
           callback(null, restaurants);
@@ -269,7 +270,7 @@ class DBHelper {
       callback(null, restaurants);
     } catch(err) {
       let restaurants,
-        sentError = `Errors:\n${err.stack || err}`;
+        sentError = `Errors:\n${err}`;
       try {
         // fetchRestaurants method is called in the openDatabase
         // method, but since inside openDatabase method
@@ -286,7 +287,7 @@ class DBHelper {
         // only keeping restaurants with this cuisine_type
         restaurants = restaurants.filter(restaurant => restaurant.cuisine_type === cuisine);
       } catch(error) {
-        sentError += `\n${error.stack || error}`;
+        sentError += `\n${error}`;
       } finally {
         if(restaurants && restaurants.length) {
           callback(null, restaurants);
