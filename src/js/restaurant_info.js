@@ -38,12 +38,6 @@ class RestaurantInfo {
    * Get current restaurant from page URL.
    */
   fetchRestaurantFromURL(callback) {
-    if (this.restaurant) { // restaurant already fetched!
-      callback(null, this.restaurant);
-      this.fillBreadcrumb();
-      return;
-    }
-
     const id = this.getParameterByName('id');
     if (!id) { // no id found in URL
       const error = 'No restaurant id in URL';
@@ -53,7 +47,7 @@ class RestaurantInfo {
     }
 
     this.dbHelper.fetchRestaurantById(id, (error, restaurant) => {
-      if (!restaurant) {
+      if (error) {
         callback(error, null);
         this.handleRestaurantNotFound();
         return;
