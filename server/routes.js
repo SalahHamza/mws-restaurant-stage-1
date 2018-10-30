@@ -106,7 +106,7 @@ const cacheToCacheMiddleware = (duration) => {
  streaming service worker
  https://www.youtube.com/watch?v=3Tr-scf7trE&index=99&list=WL&t=1286s
 */
-router.get('/sw.js', cacheToCacheMiddleware(1*60*60), (req, res) => {
+router.get('/sw.js', cacheToCacheMiddleware(10), (req, res) => {
   const input = fs.createReadStream(`${__dirname}/../app/sw.js`);
   /*
     since service workers have strict
