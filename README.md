@@ -20,11 +20,6 @@ Clone the app
 git clone https://github.com/SalahHamza/mws-restaurant-stage-1.git
 ```
 
-and the dev server
-```
-git clone https://github.com/SalahHamza/mws-restaurant-stage-2.git
-```
-
 The `mws-restaurant-stage-1/` app depends on some environment variables, make sure to change to the aforementioned directory and create a `.env`:
 ```
 $ cd mws-restaurant-stage-1
@@ -40,23 +35,19 @@ PORT=3000
 API_KEY_SECRET=apiKeyId:Mapbox
 ```
 
+:ballot_box_with_check: You also need to have the local dev server from which your app receives data. You can check the [dev server's docs](https://github.com/SalahHamza/mws-restaurant-stage-2#local-development-api-server) for more information.
+
 ### Installing
 
 #### Install dependencies
 
-To get up and running all you need to do is install the dependencies for both client side of the app and dev server.
+To get up and running all you need to do is install the dependencies.
 
-Go to each directory and run:
 ```
 npm install
 ```
 
-or you can do that from the directory you created like this:
-```
-$ (cd mws-restaurant-stage-1 && npm install)
-$ (cd mws-restaurant-stage-2 && npm install)
-```
-**Note**: the parentheses denotes a subshell.
+**Note**: Make sure you are inside the project directory.
 
 #### Run task runner
 
@@ -74,30 +65,13 @@ Run the default task to generate files + live editing (with browser-sync):
 gulp
 ```
 
-Note: browsersync is used with proxy, so make sure to spin up the server.
+**Note**: browsersync is used with proxy, so make sure to [spin up the server](#start-server).
 
-**Note**: Make sure you run the tasks in the root directory or run the command with parentheses.
+#### Start server
 
-#### Start servers
-
-Spin up the dev server, make sure you are in the `mws-restaurant-stage-2/` directory:
-
-```
-$ cd mws-restaurant-stage-2/
-$ node app.js
-```
-or just do it from the root directory of the project:
-```
-(cd mws-restaurant-stage-2 && node app.js)
-```
-
-And client side server. Remember you need to be within the `mws-restaurant-stage-1/` directory:
+Remember you need to be inside the `mws-restaurant-stage-1/` directory.
 ```
 npm run serve
-```
-or
-```
-(cd mws-restaurant-stage-1 && npm run serve)
 ```
 
 **Note**:
