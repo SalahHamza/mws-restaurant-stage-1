@@ -1,4 +1,5 @@
 import DBHelper from './dbhelper';
+import LazyLoad from 'vanilla-lazyload';
 
 class MainPage {
   constructor() {
@@ -6,6 +7,7 @@ class MainPage {
     this.cuisines = [];
     this.markers = [];
     this.dbHelper = new DBHelper();
+    this.lazyLoad = new LazyLoad();
   }
 
   /**********************
@@ -123,6 +125,7 @@ class MainPage {
     this.restaurants.forEach(restaurant => {
       ul.append(this.createRestaurantHTML(restaurant));
     });
+    this.lazyLoad.update();
     this.addMarkersToMap();
   }
 
@@ -139,19 +142,22 @@ class MainPage {
     const defaultSize = '400';
     const image = document.createElement('img');
     image.className = 'restaurant-img';
-    image.src = DBHelper.imageUrlForRestaurant(
+    const src = DBHelper.imageUrlForRestaurant(
       // since 'photograph' is the same as 'id'
       // we fallback to the 'id'
       restaurant.photograph || restaurant.id,
       defaultSize
     );
-    image.srcset = DBHelper.imageSrcsetForRestaurant(
+    image.setAttribute('data-src', src);
+    const srcset = DBHelper.imageSrcsetForRestaurant(
       restaurant.photograph || restaurant.id,
       imgSizes
     );
-    image.sizes = `(min-width: 416px) and (max-width: 632px) 400px,
+    image.setAttribute('data-srcset', srcset);
+    const sizes = `(min-width: 416px) and (max-width: 632px) 400px,
                   (min-width: 1248px) 400px,
                   300px`;
+    image.setAttribute('data-sizes', sizes);
     image.alt = `This is an image of the ${restaurant.name} restaurant`;
     li.append(image);
 
