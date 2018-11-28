@@ -47,7 +47,7 @@ class DBHelper {
    * Change this to restaurants.json file location on your server.
    */
   static get DATABASE_URL() {
-    return 'http://localhost:1337/restaurants';
+    return 'http://localhost:1337';
   }
 
 
@@ -86,7 +86,7 @@ class DBHelper {
    */
   async fetchRestaurants(callback) {
     try {
-      const res = await fetch(DBHelper.DATABASE_URL);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants`);
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
@@ -136,7 +136,7 @@ class DBHelper {
   async fetchRestaurantById(id, callback) {
     // fetch all restaurants with proper error handling.
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}?id=${id}`);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?id=${id}`);
       const restaurant = await res.json();
       callback(null, restaurant);
 
@@ -176,7 +176,7 @@ class DBHelper {
   async fetchRestaurantByCuisine(cuisine, callback) {
     // Fetch all restaurants  with proper error handling
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}?cuisine_type=${cuisine}`);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?cuisine_type=${cuisine}`);
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
@@ -206,7 +206,7 @@ class DBHelper {
   async fetchRestaurantByNeighborhood(neighborhood, callback) {
     // Fetch all restaurants
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}?neighborhood=${neighborhood}`);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?neighborhood=${neighborhood}`);
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
@@ -252,7 +252,7 @@ class DBHelper {
     }
     // fetch by neighborhood & cuisine
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}?neighborhood=${neighborhood}&cuisine_type=${cuisine}`);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?neighborhood=${neighborhood}&cuisine_type=${cuisine}`);
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch(err) {
@@ -381,6 +381,9 @@ class DBHelper {
       });
     }
   }
+
+
+  /* ================== Utils ================== */
 
   /**
    * Restaurant page URL.
