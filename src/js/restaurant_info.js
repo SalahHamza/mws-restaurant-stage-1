@@ -203,7 +203,7 @@ class RestaurantInfo {
     li.appendChild(name);
 
     const date = document.createElement('p');
-    date.innerHTML = review.date;
+    date.innerHTML = new Date(review.createdAt).toDateString();
     date.className = 'review-date';
     li.appendChild(date);
 
