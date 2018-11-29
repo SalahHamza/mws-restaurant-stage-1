@@ -7,7 +7,7 @@ import IndexController from './indexController';
  that would be 'http://localhost:port'
 */
 const BASE_URL = (() => {
-  if(location.origin.includes('localhost:')) {
+  if (location.origin.includes('localhost:')) {
     return location.origin;
   }
   return `${location.origin}/mws-restaurant-stage-1`;
@@ -36,7 +36,7 @@ class DBHelper {
       const res = await fetch('/mapbox_api_key', { headers });
       const key = await res.json();
       return key.MAPBOX_TOKEN;
-    } catch(err) {
+    } catch (err) {
       console.log('data wasn\'t fetched');
       return Promise.resolve();
     }
@@ -47,7 +47,7 @@ class DBHelper {
    * Change this to restaurants.json file location on your server.
    */
   static get DATABASE_URL() {
-    return 'http://localhost:1337/restaurants';
+    return 'http://localhost:1337';
   }
 
 
@@ -86,17 +86,17 @@ class DBHelper {
    */
   async fetchRestaurants(callback) {
     try {
-      const res = await fetch(DBHelper.DATABASE_URL);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants`);
       const restaurants = await res.json();
       callback(null, restaurants);
-    } catch(err) {
+    } catch (err) {
 
       // fetchRestaurants method is called in the openDatabase
       // method, but since inside openDatabase method
       // this.idbPromise property is yet to be set, there won't be
       // any conflic 'await undefined' yields 'undefined'
       const db = await this.idbPromise;
-      if(!db) return;
+      if (!db) return;
 
       const restaurants = [];
       const tx = db.transaction('restaurants');
@@ -119,7 +119,7 @@ class DBHelper {
       // any cuisines
       await tx.complete;
 
-      if(!restaurants.length) {
+      if (!restaurants.length) {
         const sentError = `Errors:\n${err}
         No restaurant found in IDB`;
         callback(sentError, null);
@@ -136,12 +136,12 @@ class DBHelper {
   async fetchRestaurantById(id, callback) {
     // fetch all restaurants with proper error handling.
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}?id=${id}`);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?id=${id}`);
       const restaurant = await res.json();
       callback(null, restaurant);
 
       const db = await this.idbPromise;
-      if(!db) return;
+      if (!db) return;
 
       const tx = db.transaction('restaurants', 'readwrite');
       const store = tx.objectStore('restaurants');
@@ -149,9 +149,9 @@ class DBHelper {
 
       return tx.complete;
 
-    } catch(err) {
+    } catch (err) {
       const db = await this.idbPromise;
-      if(!db) return;
+      if (!db) return;
 
       const tx = db.transaction('restaurants');
       const store = tx.objectStore('restaurants');
@@ -159,7 +159,7 @@ class DBHelper {
       // get restaurant with this 'id'
       const restaurant = await store.get(Number(id));
 
-      if(!restaurant) {
+      if (!restaurant) {
         const sentError = `Errors:\n${err}
         Restaurant not found in IDB`;
         callback(sentError, null);
@@ -176,20 +176,20 @@ class DBHelper {
   async fetchRestaurantByCuisine(cuisine, callback) {
     // Fetch all restaurants  with proper error handling
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}?cuisine_type=${cuisine}`);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?cuisine_type=${cuisine}`);
       const restaurants = await res.json();
       callback(null, restaurants);
-    } catch(err) {
+    } catch (err) {
 
       const db = await this.idbPromise;
-      if(!db) return;
+      if (!db) return;
       // const restaurants = [];
       const tx = db.transaction('restaurants');
       const store = tx.objectStore('restaurants').index('by-cuisine');
 
       const restaurants = await store.getAll(cuisine);
 
-      if(!restaurants.length) {
+      if (!restaurants.length) {
         const sentError = `Errors:\n${err}
         No restaurant found in IDB`;
         callback(sentError, null);
@@ -206,13 +206,13 @@ class DBHelper {
   async fetchRestaurantByNeighborhood(neighborhood, callback) {
     // Fetch all restaurants
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}?neighborhood=${neighborhood}`);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?neighborhood=${neighborhood}`);
       const restaurants = await res.json();
       callback(null, restaurants);
-    } catch(err) {
+    } catch (err) {
 
       const db = await this.idbPromise;
-      if(!db) return;
+      if (!db) return;
 
       // const restaurants = [];
       const tx = db.transaction('restaurants');
@@ -220,7 +220,7 @@ class DBHelper {
 
       const restaurants = await store.getAll(neighborhood);
 
-      if(!restaurants.length) {
+      if (!restaurants.length) {
         const sentError = `Errors:\n${err}
         No restaurant found in IDB`;
         callback(sentError, null);
@@ -236,29 +236,29 @@ class DBHelper {
    */
   async fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, callback) {
     // Fetch all restaurants
-    if(cuisine === 'all' && neighborhood === 'all') {
+    if (cuisine === 'all' && neighborhood === 'all') {
       this.fetchRestaurants(callback);
       return;
     }
     // fetch by neighborhood
-    if(cuisine === 'all') {
+    if (cuisine === 'all') {
       this.fetchRestaurantByNeighborhood(neighborhood, callback);
       return;
     }
     // fetch by cuisine
-    if(neighborhood === 'all') {
+    if (neighborhood === 'all') {
       this.fetchRestaurantByCuisine(cuisine, callback);
       return;
     }
     // fetch by neighborhood & cuisine
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}?neighborhood=${neighborhood}&cuisine_type=${cuisine}`);
+      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?neighborhood=${neighborhood}&cuisine_type=${cuisine}`);
       const restaurants = await res.json();
       callback(null, restaurants);
-    } catch(err) {
+    } catch (err) {
 
       const db = await this.idbPromise;
-      if(!db) return;
+      if (!db) return;
 
       const tx = db.transaction('restaurants');
       const index = tx.objectStore('restaurants').index('by-neighborhood');
@@ -266,7 +266,7 @@ class DBHelper {
       // get all restaurants with this neighborhood
       const restaurants = await index.getAll(neighborhood);
 
-      if(!restaurants.length) {
+      if (!restaurants.length) {
         const sentError = `Errors:\n${err}
         No restaurant found in IDB`;
         callback(sentError, null);
@@ -287,7 +287,7 @@ class DBHelper {
     try {
       // fetching neighborhoods from IDB if they exist
       const db = await this.idbPromise;
-      if(!db) throw new Error('idbPromise failed to resolve db');
+      if (!db) throw new Error('idbPromise failed to resolve db');
 
       const neighborhoods = [];
       const tx = db.transaction('neighborhoods');
@@ -301,10 +301,10 @@ class DBHelper {
 
       await tx.complete;
 
-      if(!neighborhoods.length) throw new Error('No cuisines found in IDB');
+      if (!neighborhoods.length) throw new Error('No cuisines found in IDB');
       callback(null, neighborhoods);
 
-    } catch(err) {
+    } catch (err) {
       // Fetch all restaurants and extract neighborhoods
       this.fetchRestaurants(async (error, restaurants) => {
         if (error) {
@@ -319,11 +319,11 @@ class DBHelper {
         callback(null, uniqueNeighborhoods);
 
         const db = await this.idbPromise;
-        if(!db) return;
+        if (!db) return;
 
         const tx = db.transaction('neighborhoods', 'readwrite');
         const store = tx.objectStore('neighborhoods');
-        for(const neighborhood of uniqueNeighborhoods) {
+        for (const neighborhood of uniqueNeighborhoods) {
           store.put(neighborhood, neighborhood);
         }
         return tx.complete;
@@ -337,7 +337,7 @@ class DBHelper {
   async fetchCuisines(callback) {
     try {
       const db = await this.idbPromise;
-      if(!db) throw new Error('idbPromise failed to resolve db');
+      if (!db) throw new Error('idbPromise failed to resolve db');
 
       const cuisines = [];
       const tx = db.transaction('cuisines');
@@ -353,10 +353,10 @@ class DBHelper {
       // until transaction completes & then checking if we got
       // any cuisines
       await tx.complete;
-      if(!cuisines.length) throw new Error('No cuisine found in IDB');
+      if (!cuisines.length) throw new Error('No cuisine found in IDB');
       callback(null, cuisines);
 
-    } catch(err) {
+    } catch (err) {
       // Fetch all restaurants and extract cuisines
       this.fetchRestaurants(async (error, restaurants) => {
         if (error) {
@@ -371,16 +371,32 @@ class DBHelper {
         callback(null, uniqueCuisines);
 
         const db = await this.idbPromise;
-        if(!db) return;
+        if (!db) return;
         const tx = db.transaction('cuisines', 'readwrite');
         const store = tx.objectStore('cuisines');
-        for(const cuisine of uniqueCuisines) {
+        for (const cuisine of uniqueCuisines) {
           store.put(cuisine, cuisine);
         }
         return tx.complete;
       });
     }
   }
+
+
+  /**
+   * Fetch all reviews for specific restaurant
+   */
+  async fetchReviewsForRestaurantId(id) {
+    try {
+      const res = await fetch(`${DBHelper.DATABASE_URL}/reviews?restaurant_id=${id}`);
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  /* ================== Utils ================== */
 
   /**
    * Restaurant page URL.
@@ -398,7 +414,7 @@ class DBHelper {
     );
   }
 
-  static imageSrcsetForRestaurant(photograph, sizes=[]){
+  static imageSrcsetForRestaurant(photograph, sizes = []) {
     return sizes
       .map(size => `${BASE_URL}/assets/img/${photograph}-${size}w.jpg ${size}w`)
       .join(', ');
