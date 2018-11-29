@@ -54,6 +54,7 @@ class RestaurantInfo {
       }
       this.restaurant = restaurant;
       this.fillBreadcrumb();
+      this.fetchReviews();
       this.fillRestaurantHTML();
       callback(null, restaurant);
     });
@@ -118,8 +119,19 @@ class RestaurantInfo {
     if (this.restaurant.operating_hours) {
       this.fillRestaurantHoursHTML();
     }
-    // fill reviews
-    this.fillReviewsHTML();
+
+  }
+
+
+  async fetchReviews() {
+    try {
+      const reviews = await this.dbHelper.fetchReviewsForRestaurantId(this.restaurant.id);
+      this.restaurant.reviews = reviews;
+      // fill reviews
+      this.fillReviewsHTML();
+    } catch (err) {
+      console.log(err);
+    }
   }
 
 
@@ -216,13 +228,13 @@ class RestaurantInfo {
 
     const hollowStars = 5 - reviewRating;
 
-    for(let i=0; i<reviewRating; i++){
+    for (let i = 0; i < reviewRating; i++) {
       const $star = document.createElement('span');
       $star.innerHTML = '★';
       $rating.appendChild($star);
     }
 
-    for(let i=0; i<hollowStars; i++){
+    for (let i = 0; i < hollowStars; i++) {
       const $star = document.createElement('span');
       $star.innerHTML = '☆';
       $rating.appendChild($star);
@@ -245,7 +257,7 @@ class RestaurantInfo {
    * Get a parameter by name from page URL.
    */
   getParameterByName(name, url) {
-    if (!url){
+    if (!url) {
       url = window.location.href;
     }
     const sanitizePattern = new RegExp('[\\[\\]]', 'g');
@@ -265,7 +277,7 @@ class RestaurantInfo {
      * Initialize map as soon as the page is loaded.
      */
     document.addEventListener('DOMContentLoaded', () => {
-      DBHelper.fetchMAPBOXToken().then( mapboxToken => {
+      DBHelper.fetchMAPBOXToken().then(mapboxToken => {
         this.initMap(mapboxToken); // added
       });
     });
