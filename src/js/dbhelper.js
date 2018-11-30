@@ -64,11 +64,11 @@ class DBHelper {
     }
 
     this.idbPromise = idb.open('reviews-app', 1, upgradeDb => {
-      const store = upgradeDb.createObjectStore('restaurants', {
+      const restaurantsStore = upgradeDb.createObjectStore('restaurants', {
         keyPath: 'id'
       });
-      store.createIndex('by-cuisine', 'cuisine_type');
-      store.createIndex('by-neighborhood', 'neighborhood');
+      restaurantsStore.createIndex('by-cuisine', 'cuisine_type');
+      restaurantsStore.createIndex('by-neighborhood', 'neighborhood');
 
       // store for cuisines
       upgradeDb.createObjectStore('cuisines', {
@@ -78,6 +78,12 @@ class DBHelper {
       upgradeDb.createObjectStore('neighborhoods', {
         autoIncrement: false
       });
+
+      const reviewsStore = upgradeDb.createObjectStore('reviews', {
+        keyPath: 'id'
+      });
+
+      reviewsStore.createIndex('by-restaurant-id', 'restaurant_id');
     });
   }
 
@@ -389,12 +395,57 @@ class DBHelper {
   async fetchReviewsForRestaurantId(id) {
     try {
       const res = await fetch(`${DBHelper.DATABASE_URL}/reviews?restaurant_id=${id}`);
-      const data = await res.json();
-      return data;
+      const reviews = await res.json();
+      this.addReviewsToIDB(reviews);
+      return reviews;
     } catch (err) {
+      // falling back to IDB
+      // also sending error see what's the problem
+      return await this.getReviewsFromIDB(id, err);
+    }
+  }
+
+  /**
+   *
+   * @param {Array} reviews - reviews to add to IDB
+   */
+  async addReviewsToIDB(reviews) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const tx = db.transaction('reviews', 'readwrite');
+      const store = tx.objectStore('reviews');
+
+
+      for(const review of reviews) {
+        store.put(review);
+      }
+
+      return tx.complete;
+    } catch(err) {
       console.log(err);
     }
   }
+
+  /**
+   * get All reviews for this restaurant id
+   */
+  async getReviewsFromIDB(id, error) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const tx = db.transaction('reviews');
+      const index = tx.objectStore('reviews').index('by-restaurant-id');
+
+      const reviews = await index.getAll(id);
+      return reviews;
+    } catch(err) {
+      console.log(`Erros:\n${error}\n${err}`);
+    }
+  }
+
 
   /* ================== Utils ================== */
 
