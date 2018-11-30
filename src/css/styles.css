@@ -562,6 +562,27 @@ nav {
   padding-bottom: 1pt;
 }
 
+.btn {
+  cursor: pointer;
+  padding: 12px 30px;
+  text-transform: uppercase;
+  transition: box-shadow .5s ease, background .5s ease;
+  border-radius: 2px;
+  border: none;
+}
+
+.new-review.btn {
+  background-color: var(--tertiary-color);
+  color: #fff;
+  margin: 0 0 24px;
+}
+
+.new-review.btn:hover,
+.new-review.btn:focus {
+  background-color: var(--tertiary-color-lt);
+  box-shadow: var(--card-shaddow);
+}
+
 .reviews-list {
   margin: 0;
   padding: 0;

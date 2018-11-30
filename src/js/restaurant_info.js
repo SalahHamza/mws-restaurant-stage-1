@@ -177,6 +177,13 @@ class RestaurantInfo {
     title.innerHTML = 'Reviews';
     container.appendChild(title);
 
+    const newReviewButton = document.createElement('button');
+    newReviewButton.className = 'new-review btn';
+    newReviewButton.innerHTML = 'Add new review';
+    newReviewButton.setAttribute('type', 'button');
+    newReviewButton.addEventListener('click', this.handleNewReviewClick.bind(this));
+    container.appendChild(newReviewButton);
+
     if (!this.restaurant.reviews) {
       const noReviews = document.createElement('p');
       noReviews.innerHTML = 'No reviews yet!';
@@ -188,6 +195,10 @@ class RestaurantInfo {
       ul.appendChild(this.createReviewHTML(review));
     });
     container.appendChild(ul);
+  }
+
+  handleNewReviewClick() {
+    // Do something on new review button click
   }
 
   /**
