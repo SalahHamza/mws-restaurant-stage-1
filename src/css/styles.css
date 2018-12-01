@@ -737,6 +737,13 @@ nav {
   }
 }
 
+/* warning message that shows when
+field is empty */
+.empty-field-warning {
+  text-align: center;
+  color: tomato;
+}
+
 /*=========== review form End ===========*/
 
 .reviews-list {

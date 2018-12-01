@@ -204,7 +204,7 @@ class RestaurantInfo {
     const formContainer = document.querySelector('.review-form-wrapper');
     if (!this.pageHasForm) {
       // maybe I'll need to request an animation frame here
-      formContainer.appendChild(this.createReviewForm(/* pass the submit handler here */));
+      formContainer.appendChild(this.createReviewForm(this.handleReviewSubmission.bind(this)));
       this.pageHasForm = true;
     }
     formContainer.classList.add('visible');
@@ -222,12 +222,12 @@ class RestaurantInfo {
     form.className = 'review-form-container';
 
     const nameFieldHTML =
-    `<label class="form-item">
+      `<label class="form-item">
       <span class="form-item-label">Name:</span>
       <input name="name" type="text" placeholder="John"/>
     </label>`;
 
-    const starsHTML = [1,2,3,4,5].map( i =>
+    const starsHTML = [1, 2, 3, 4, 5].map(i =>
       (`<input value="${i}" id="star${i}"
         type="radio" name="rating" class="sr-only">
       <label for="star${i}">
@@ -248,10 +248,10 @@ class RestaurantInfo {
     </fieldset>`;
 
     const commentFieldHTML =
-    `<label class="form-item">
+      `<label class="form-item">
     <span class="form-item-label">Comments:</span>
     <textarea
-      placeholder="Your comments"
+      placeholder="Your comments (in 20 letters or more)s"
       name="comment" id="review-comment" rows="10"
     ></textarea>
     </label>`;
@@ -267,7 +267,7 @@ class RestaurantInfo {
     </span>`;
 
     form.innerHTML =
-    `<h3>Tell people what you think!</h3>
+      `<h3>Tell people what you think!</h3>
     ${nameFieldHTML}
     ${ratingFieldHTML}
     ${commentFieldHTML}
@@ -286,6 +286,91 @@ class RestaurantInfo {
 
     return form;
   }
+
+  /**
+   * handle review form submit button click
+   */
+  handleReviewSubmission(event) {
+    event.preventDefault();
+    const formData = this.getReviewData();
+    if (!formData) return;
+    // Do something with formData
+  }
+
+  /**
+   * validate form field and get their values
+   * @returns Object with form data
+   */
+  getReviewData() {
+    const formContainer = document.querySelector('.review-form-wrapper');
+    const reviewObj = {};
+
+    // validate name input
+    const nameElem = formContainer.querySelector('input[name="name"]');
+    const nameValue = nameElem.value.trim();
+    if (!nameValue) {
+      this.handleEmptyFormField(nameElem, 'Oops! Name field is required');
+      return;
+    }
+    reviewObj.name = nameValue;
+
+    // validate star rating input
+    const ratingElem = formContainer.querySelector('fieldset');
+    const ratingValue = Number(ratingElem.querySelector('input:checked').value);
+    if (!ratingValue) {
+      const message = 'Either the restaurant is <em>really</em> bad or you forgot to rate!';
+      this.handleEmptyFormField(ratingElem, message);
+      return;
+    }
+    reviewObj.rating = ratingValue;
+
+    // validate comment input
+    const commentElem = formContainer.querySelector('textarea');
+    const commentString = commentElem.value.trim();
+    if (!commentString) {
+      const message = 'We really do care about your opinion!';
+      this.handleEmptyFormField(commentElem, message);
+      return;
+    }
+    if (commentString.length < 20) {
+      const message = 'Please, do write a comment you\'d want to read yourself';
+      this.handleEmptyFormField(commentElem, message);
+      return;
+    }
+    reviewObj.comments = commentString;
+
+    return reviewObj;
+  }
+
+  /**
+   * displays warning message after empty field
+   *
+   * @param {object} fieldNode - Form field node to check
+   * @param {string} message - message to display if field is empty
+   */
+  handleEmptyFormField(fieldNode, message) {
+    // we check if concerned field already has a warning
+    if (fieldNode.hasWarning) return;
+
+    const warning = document.createElement('span');
+    warning.className = 'empty-field-warning';
+    warning.innerHTML = `*${message}`;
+    fieldNode.insertAdjacentElement('afterend', warning);
+
+    // we state that concerned field have a warning now
+    fieldNode.hasWarning = true;
+    const hideWarning = () => {
+      warning.remove();
+      // we state that concerned field doesn't have a warning
+      fieldNode.hasWarning = false;
+    };
+
+    // adding multiple handlers to also handle the fieldset
+    // since fieldset can't be focused
+    fieldNode.addEventListener('focus', hideWarning);
+    fieldNode.addEventListener('click', hideWarning);
+  }
+
 
   /**
    * Create review HTML and add it to the webpage.
@@ -313,8 +398,6 @@ class RestaurantInfo {
 
     return li;
   }
-
-
 
   /**
    * Create rating element as stars
