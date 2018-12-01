@@ -197,8 +197,94 @@ class RestaurantInfo {
     container.appendChild(ul);
   }
 
+  /**
+   * shows review form on 'new review' button click
+   */
   handleNewReviewClick() {
-    // Do something on new review button click
+    const formContainer = document.querySelector('.review-form-wrapper');
+    if (!this.pageHasForm) {
+      // maybe I'll need to request an animation frame here
+      formContainer.appendChild(this.createReviewForm(/* pass the submit handler here */));
+      this.pageHasForm = true;
+    }
+    formContainer.classList.add('visible');
+  }
+
+  /**
+   * create review form element
+   * review form was inspired by the Web a11y tutorial for custom
+   * elements: https://www.w3.org/WAI/tutorials/forms/custom-controls/
+   *
+   * @param {function} handleSubmit - handler for the submit button click
+   */
+  createReviewForm(handleSubmit) {
+    const form = document.createElement('form');
+    form.className = 'review-form-container';
+
+    const nameFieldHTML =
+    `<label class="form-item">
+      <span class="form-item-label">Name:</span>
+      <input name="name" type="text" placeholder="John"/>
+    </label>`;
+
+    const starsHTML = [1,2,3,4,5].map( i =>
+      (`<input value="${i}" id="star${i}"
+        type="radio" name="rating" class="sr-only">
+      <label for="star${i}">
+        <span class="sr-only">${i} Star rating</span>
+        <span class="icon">★</span>
+      </label>`)
+    ).join('');
+
+    //html for the star rating fieldset
+    const ratingFieldHTML = `<fieldset class="form-item rating">
+    <legend class="form-item-label">Rating:</legend>
+    <input value="0" id="star0" checked
+    type="radio" name="rating" class="sr-only">
+    <label for="star0">
+      <span class="sr-only">0 Stars rating</span>
+    </label>
+    ${starsHTML}
+    </fieldset>`;
+
+    const commentFieldHTML =
+    `<label class="form-item">
+    <span class="form-item-label">Comments:</span>
+    <textarea
+      placeholder="Your comments"
+      name="comment" id="review-comment" rows="10"
+    ></textarea>
+    </label>`;
+
+    const btnFieldHTML = `
+    <span class="btn-container">
+    <button
+      type="button" class="form-cancel btn"
+    >Cancel</button>
+    <button
+      type="submit" class="form-submit btn"
+    >Submit</button>
+    </span>`;
+
+    form.innerHTML =
+    `<h3>Tell people what you think!</h3>
+    ${nameFieldHTML}
+    ${ratingFieldHTML}
+    ${commentFieldHTML}
+    ${btnFieldHTML}`;
+
+    // hide review form on cancel button click
+    form.querySelector('.btn.form-cancel')
+      .onclick = () => {
+        document.querySelector('.review-form-wrapper')
+          .classList.remove('visible');
+      };
+
+    // handle form submission on click
+    form.querySelector('.btn.form-submit')
+      .onclick = handleSubmit;
+
+    return form;
   }
 
   /**
