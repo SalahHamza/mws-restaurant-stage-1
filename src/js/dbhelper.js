@@ -64,12 +64,14 @@ class DBHelper {
     }
 
     this.idbPromise = idb.open('reviews-app', 1, upgradeDb => {
+      // restaurants related stores/indexes
       const restaurantsStore = upgradeDb.createObjectStore('restaurants', {
         keyPath: 'id'
       });
       restaurantsStore.createIndex('by-cuisine', 'cuisine_type');
       restaurantsStore.createIndex('by-neighborhood', 'neighborhood');
 
+      // category related stores/indexes
       // store for cuisines
       upgradeDb.createObjectStore('cuisines', {
         autoIncrement: false
@@ -79,11 +81,17 @@ class DBHelper {
         autoIncrement: false
       });
 
+      // reviews related stores/indexes
       const reviewsStore = upgradeDb.createObjectStore('reviews', {
         keyPath: 'id'
       });
-
       reviewsStore.createIndex('by-restaurant-id', 'restaurant_id');
+      /* an outbox store to hold (new) deferred reviews */
+      const reviewsOutboxStore = upgradeDb.createObjectStore('reviews-outbox', {
+        keyPath: 'id',
+        autoIncrement: true
+      });
+      reviewsOutboxStore.createIndex('by-restaurant-id', 'restaurant_id');
     });
   }
 
