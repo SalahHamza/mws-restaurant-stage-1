@@ -477,9 +477,30 @@ class DBHelper {
 
       return createdReview;
     } catch (err) {
+      this.addReviewToOutbox(review);
       console.log(err);
     }
 
+  }
+
+  /**
+   * adds the given review to the outbox (pending reviews) store
+   * @param {object} review - review data to add to the outbox store
+   */
+  async addReviewToOutbox(review) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const tx = db.transaction('reviews-outbox', 'readwrite');
+      const store = tx.objectStore('reviews-outbox');
+
+      store.put(review);
+
+      return tx.complete;
+    } catch (err) {
+      console.log(err);
+    }
   }
 
 
