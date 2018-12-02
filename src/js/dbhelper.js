@@ -446,6 +446,34 @@ class DBHelper {
     }
   }
 
+  /**
+   * Post request to create new review
+   */
+  async createNewReview(review) {
+    try {
+      const url = `${DBHelper.DATABASE_URL}/reviews`;
+      const options = {
+        method: 'POST',
+        cors: 'no-cors',
+        body: JSON.stringify(review)
+      };
+
+      const res = await fetch(url, options);
+
+      if(res.status !== 201) throw new Error('Review wasn\'t created');
+
+      const createdReview = await res.json();
+
+      // adding review to IDB
+      this.addReviewsToIDB([createdReview]);
+
+      return createdReview;
+    } catch(err) {
+      console.log(err);
+    }
+
+  }
+
 
   /* ================== Utils ================== */
 
