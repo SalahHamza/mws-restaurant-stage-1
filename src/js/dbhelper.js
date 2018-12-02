@@ -463,6 +463,10 @@ class DBHelper {
       if(res.status !== 201) throw new Error('Review wasn\'t created');
 
       const createdReview = await res.json();
+
+      // adding review to IDB
+      this.addReviewsToIDB([createdReview]);
+
       return createdReview;
     } catch(err) {
       console.log(err);
