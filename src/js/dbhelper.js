@@ -444,11 +444,20 @@ class DBHelper {
       const db = await this.idbPromise;
       if (!db) throw new Error('idbPromise failed to resolve db');
 
-      const tx = db.transaction('reviews');
-      const index = tx.objectStore('reviews').index('by-restaurant-id');
+      const tx1 = db.transaction('reviews');
+      const index1 = tx1.objectStore('reviews').index('by-restaurant-id');
+      //async so it won't stop the execution
+      const reviews = index1.getAll(id);
 
-      const reviews = await index.getAll(id);
-      return reviews;
+      const tx2 = db.transaction('reviews-outbox');
+      const index2 = tx2.objectStore('reviews-outbox').index('by-restaurant-id');
+
+      const pendingReviews = index2.getAll(id);
+
+      // concatenating and returning both
+      // reviews and pending reviews
+      return (await pendingReviews)
+        .concat(await reviews);
     } catch (err) {
       console.log(`Erros:\n${error}\n${err}`);
     }
@@ -498,6 +507,25 @@ class DBHelper {
       store.put(review);
 
       return tx.complete;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  /**
+   * get pending reviews from outbox if they exist
+   * @param {number} id - restaurant id to get reviews for
+   */
+  async getPendingReviews(id) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const tx = db.transaction('reviews-outbox');
+      const index = tx.objectStore('reviews-outbox').index('by-restaurant-id');
+
+      const reviews = await index.getAll(id);
+      return reviews;
     } catch (err) {
       console.log(err);
     }
