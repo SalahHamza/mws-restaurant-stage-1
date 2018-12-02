@@ -81,6 +81,20 @@ class IndexController {
       }]
     });
   }
+
+  /**
+   * requesting a sync to post the reviews in the outbox store
+   */
+  async requestPostOutboxSync() {
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        return reg.sync.register('postOutbox');
+      } catch(err) {
+        console.log('postoutbox sync failed:\n', err);
+      }
+    }
+  }
 }
 
 export default IndexController;

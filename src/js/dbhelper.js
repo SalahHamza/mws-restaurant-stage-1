@@ -21,7 +21,8 @@ class DBHelper {
   constructor() {
     this.openDatabase();
     // initilizing indexController (register service worker)
-    new IndexController().init();
+    this.indexController = new IndexController();
+    this.indexController.init();
   }
   /**
    * Fetch MAPBOX Token from DB instead of including
@@ -487,7 +488,9 @@ class DBHelper {
       return createdReview;
     } catch (err) {
       this.addReviewToOutbox(review);
-      console.log(err);
+      // request a background sync to post messages
+      // in the outbox store when connection is back
+      this.indexController.requestPostOutboxSync(review);
     }
 
   }
