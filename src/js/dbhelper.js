@@ -397,11 +397,11 @@ class DBHelper {
       const res = await fetch(`${DBHelper.DATABASE_URL}/reviews?restaurant_id=${id}`);
       const reviews = await res.json();
       this.addReviewsToIDB(reviews);
-      return reviews;
+      return DBHelper.sortByDate(reviews);
     } catch (err) {
       // falling back to IDB
       // also sending error see what's the problem
-      return await this.getReviewsFromIDB(id, err);
+      return DBHelper.sortByDate(await this.getReviewsFromIDB(id, err));
     }
   }
 
@@ -418,12 +418,12 @@ class DBHelper {
       const store = tx.objectStore('reviews');
 
 
-      for(const review of reviews) {
+      for (const review of reviews) {
         store.put(review);
       }
 
       return tx.complete;
-    } catch(err) {
+    } catch (err) {
       console.log(err);
     }
   }
@@ -441,7 +441,7 @@ class DBHelper {
 
       const reviews = await index.getAll(id);
       return reviews;
-    } catch(err) {
+    } catch (err) {
       console.log(`Erros:\n${error}\n${err}`);
     }
   }
@@ -460,7 +460,7 @@ class DBHelper {
 
       const res = await fetch(url, options);
 
-      if(res.status !== 201) throw new Error('Review wasn\'t created');
+      if (res.status !== 201) throw new Error('Review wasn\'t created');
 
       const createdReview = await res.json();
 
@@ -468,7 +468,7 @@ class DBHelper {
       this.addReviewsToIDB([createdReview]);
 
       return createdReview;
-    } catch(err) {
+    } catch (err) {
       console.log(err);
     }
 
@@ -476,6 +476,12 @@ class DBHelper {
 
 
   /* ================== Utils ================== */
+
+  static sortByDate(arr) {
+    return arr.slice().sort((a, b) => {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  }
 
   /**
    * Restaurant page URL.
