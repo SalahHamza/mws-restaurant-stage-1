@@ -290,12 +290,43 @@ class RestaurantInfo {
   /**
    * handle review form submit button click
    */
-  handleReviewSubmission(event) {
+  async handleReviewSubmission(event) {
     event.preventDefault();
     const formData = this.getReviewData();
     if (!formData) return;
     // Do something with formData
+    formData['restaurant_id'] = this.restaurant.id;
+    // setting the 'createdAt' & 'updatedAt' to the currentTime
+    // incase we want to defer the request, we need to store the
+    // time the review form was submitted
+    const currentTime = new Date().getTime();
+    formData['createdAt'] = formData['updatedAt'] = currentTime;
+    // initiate the post request
+    this.dbHelper.createNewReview(formData);
+    // handle configuration after the review data has arrived
+    this.onReviewData(formData);
   }
+
+  /**
+   * create & appends new review element, closes & clears form,
+   * and focuses new review element
+   * @param {object} review - new review data
+   */
+  onReviewData(review) {
+    // inserting new review at the start of the review list
+    const el = this.createReviewHTML(review);
+    document.querySelector('.reviews-list')
+      .insertAdjacentElement('afterbegin', el);
+
+    // closing and clearnig the form
+    const formContainer = document.querySelector('.review-form-wrapper');
+    formContainer.querySelector('form').reset();
+    formContainer.classList.remove('visible');
+    // focus the comment
+    el.setAttribute('tabindex', '0');
+    el.focus();
+  }
+
 
   /**
    * validate form field and get their values
