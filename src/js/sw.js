@@ -1,6 +1,6 @@
 // the version will be replaced in the build step
 const version = '<<-!version->>';
-const staticCacheName  = `reviews-app--static-${version}`;
+const staticCacheName = `reviews-app--static-${version}`;
 const contentImgsCacheName = 'reviews-app--content-imgs';
 const allCaches = [
   staticCacheName,
@@ -29,7 +29,7 @@ const toCache = [
 ];
 
 addEventListener('install', event => {
-  event.waitUntil(async function() {
+  event.waitUntil(async function () {
     console.log('caching assets');
     const cache = await caches.open(staticCacheName);
     await cache.addAll(toCache);
@@ -37,7 +37,7 @@ addEventListener('install', event => {
 });
 
 addEventListener('activate', event => {
-  event.waitUntil(async function() {
+  event.waitUntil(async function () {
     const keys = await caches.keys();
     await Promise.all(
       keys
@@ -83,14 +83,14 @@ addEventListener('fetch', event => {
 
   const requestUrl = new URL(event.request.url);
 
-  if(location.origin === requestUrl.origin)  {
+  if (location.origin === requestUrl.origin) {
 
     // only match /restaurant.html or /restaurant
-    if(/^\/restaurant(\.html)?$/.test(requestUrl.pathname)) {
-      event.respondWith(async function() {
-        const cachedResponse =  await caches.match('./restaurant');
+    if (/^\/restaurant(\.html)?$/.test(requestUrl.pathname)) {
+      event.respondWith(async function () {
+        const cachedResponse = await caches.match('./restaurant');
         // if there is no match the cachedResponse will be 'null' (i.e. falsey)
-        if(cachedResponse) return cachedResponse;
+        if (cachedResponse) return cachedResponse;
 
         // when we return fetch, it's going to pass the Promise
         // even if the promise rejects
@@ -101,16 +101,16 @@ addEventListener('fetch', event => {
       return;
     }
 
-    if(requestUrl.pathname.startsWith('/assets/img/')) {
+    if (requestUrl.pathname.startsWith('/assets/img/')) {
       event.respondWith(servePhoto(event.request));
       return;
     }
   }
 
   // other requests
-  event.respondWith(async function() {
+  event.respondWith(async function () {
     const cachedResponse = await caches.match(event.request);
-    if(cachedResponse) return cachedResponse;
+    if (cachedResponse) return cachedResponse;
 
     return fetch(event.request);
   }());
@@ -125,6 +125,17 @@ addEventListener('fetch', event => {
 addEventListener('message', event => {
   if (event.data.action === 'skipWaiting') {
     self.skipWaiting();
+  }
+});
+
+/*
+  The steps and methodology applied here is
+  form the google developer "Introducing Background Sync":
+  https://developers.google.com/web/updates/2015/12/background-sync
+*/
+addEventListener('sync', event => {
+  if (event.tag == 'postOutbox') {
+    // event.waitUntil(/* Do some stuff here */);
   }
 });
 
@@ -169,9 +180,9 @@ async function servePhoto(request) {
   const cache = await caches.open(contentImgsCacheName);
   const cachedResponse = await cache.match(storageUrl);
 
-  if(cachedResponse) {
+  if (cachedResponse) {
     const cachedImageSize = Number(cachedResponse.headers.get('size'));
-    if(cachedImageSize < requestedImageSize) {
+    if (cachedImageSize < requestedImageSize) {
       try {
         // imageFetchAndCache() is async, so if we return
         // the promise it will be passed to event.respondWith()
@@ -183,7 +194,7 @@ async function servePhoto(request) {
           storageUrl,
           size: requestedImageSize
         });
-      } catch(err) {
+      } catch (err) {
         return cachedResponse;
       }
     }
@@ -210,7 +221,7 @@ async function servePhoto(request) {
  * 'size' (with image sizeas value) from the response we get,
  * caches a clone of the response and returns the response
  */
-async function imageFetchAndCache({cache, request, storageUrl, size}) {
+async function imageFetchAndCache({ cache, request, storageUrl, size }) {
   const networkResponse = await fetch(request);
   const blob = await networkResponse.blob();
   const headers = new Headers({ size });
