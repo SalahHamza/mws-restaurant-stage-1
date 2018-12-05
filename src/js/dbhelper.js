@@ -13,7 +13,6 @@ const BASE_URL = (() => {
   return `${location.origin}/mws-restaurant-stage-1`;
 })();
 
-
 /**
  * Common database helper functions.
  */
@@ -50,7 +49,6 @@ class DBHelper {
   static get DATABASE_URL() {
     return 'http://localhost:1337';
   }
-
 
   /**
    * Open a IDB database, create an objectStore,
@@ -105,7 +103,6 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-
       // fetchRestaurants method is called in the openDatabase
       // method, but since inside openDatabase method
       // this.idbPromise property is yet to be set, there won't be
@@ -144,7 +141,6 @@ class DBHelper {
     }
   }
 
-
   /**
    * Fetch a restaurant by its ID.
    */
@@ -163,7 +159,6 @@ class DBHelper {
       store.put(restaurant);
 
       return tx.complete;
-
     } catch (err) {
       const db = await this.idbPromise;
       if (!db) return;
@@ -191,11 +186,12 @@ class DBHelper {
   async fetchRestaurantByCuisine(cuisine, callback) {
     // Fetch all restaurants  with proper error handling
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?cuisine_type=${cuisine}`);
+      const res = await fetch(
+        `${DBHelper.DATABASE_URL}/restaurants?cuisine_type=${cuisine}`
+      );
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-
       const db = await this.idbPromise;
       if (!db) return;
       // const restaurants = [];
@@ -221,11 +217,12 @@ class DBHelper {
   async fetchRestaurantByNeighborhood(neighborhood, callback) {
     // Fetch all restaurants
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?neighborhood=${neighborhood}`);
+      const res = await fetch(
+        `${DBHelper.DATABASE_URL}/restaurants?neighborhood=${neighborhood}`
+      );
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-
       const db = await this.idbPromise;
       if (!db) return;
 
@@ -249,7 +246,11 @@ class DBHelper {
   /**
    * Fetch restaurants by a cuisine and a neighborhood with proper error handling.
    */
-  async fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, callback) {
+  async fetchRestaurantByCuisineAndNeighborhood(
+    cuisine,
+    neighborhood,
+    callback
+  ) {
     // Fetch all restaurants
     if (cuisine === 'all' && neighborhood === 'all') {
       this.fetchRestaurants(callback);
@@ -267,11 +268,14 @@ class DBHelper {
     }
     // fetch by neighborhood & cuisine
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants?neighborhood=${neighborhood}&cuisine_type=${cuisine}`);
+      const res = await fetch(
+        `${
+          DBHelper.DATABASE_URL
+        }/restaurants?neighborhood=${neighborhood}&cuisine_type=${cuisine}`
+      );
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-
       const db = await this.idbPromise;
       if (!db) return;
 
@@ -287,8 +291,9 @@ class DBHelper {
         callback(sentError, null);
       } else {
         // only keeping restaurants with this cuisine_type
-        const wantedRestaurants = restaurants
-          .filter(restaurant => restaurant.cuisine_type === cuisine);
+        const wantedRestaurants = restaurants.filter(
+          restaurant => restaurant.cuisine_type === cuisine
+        );
         callback(null, wantedRestaurants);
       }
       return tx.complete;
@@ -318,7 +323,6 @@ class DBHelper {
 
       if (!neighborhoods.length) throw new Error('No cuisines found in IDB');
       callback(null, neighborhoods);
-
     } catch (err) {
       // Fetch all restaurants and extract neighborhoods
       this.fetchRestaurants(async (error, restaurants) => {
@@ -328,9 +332,13 @@ class DBHelper {
           return;
         }
         // Get all neighborhoods from all restaurants
-        const neighborhoods = restaurants.map((v, i) => restaurants[i].neighborhood);
+        const neighborhoods = restaurants.map(
+          (v, i) => restaurants[i].neighborhood
+        );
         // Remove duplicates from neighborhoods
-        const uniqueNeighborhoods = neighborhoods.filter((v, i) => neighborhoods.indexOf(v) == i);
+        const uniqueNeighborhoods = neighborhoods.filter(
+          (v, i) => neighborhoods.indexOf(v) == i
+        );
         callback(null, uniqueNeighborhoods);
 
         const db = await this.idbPromise;
@@ -370,7 +378,6 @@ class DBHelper {
       await tx.complete;
       if (!cuisines.length) throw new Error('No cuisine found in IDB');
       callback(null, cuisines);
-
     } catch (err) {
       // Fetch all restaurants and extract cuisines
       this.fetchRestaurants(async (error, restaurants) => {
@@ -382,7 +389,9 @@ class DBHelper {
         // Get all cuisines from all restaurants
         const cuisines = restaurants.map((v, i) => restaurants[i].cuisine_type);
         // Remove duplicates from cuisines
-        const uniqueCuisines = cuisines.filter((v, i) => cuisines.indexOf(v) == i);
+        const uniqueCuisines = cuisines.filter(
+          (v, i) => cuisines.indexOf(v) == i
+        );
         callback(null, uniqueCuisines);
 
         const db = await this.idbPromise;
@@ -397,16 +406,27 @@ class DBHelper {
     }
   }
 
-
   /**
    * Fetch all reviews for specific restaurant
    */
   async fetchReviewsForRestaurantId(id) {
     try {
-      const res = await fetch(`${DBHelper.DATABASE_URL}/reviews?restaurant_id=${id}`);
+      const pendingReviews = this.getReviewsFromOutbox(id);
+      const res = await fetch(
+        `${DBHelper.DATABASE_URL}/reviews?restaurant_id=${id}`
+      );
       const reviews = await res.json();
+      // add newly fetched reviews to reviews store
       this.addReviewsToIDB(reviews);
-      return DBHelper.sortByDate(reviews);
+      // post reviews in outbox store just in case
+      // they weren't added in the sync event
+      // Note: in practice, there is no need for
+      // a sync event, since the reviews
+      // are posted the next time the user visits the page
+      // with internet (the success of the fetch event gives that out)
+      this.postOutbox();
+
+      return DBHelper.sortByDate(reviews.concat(await pendingReviews));
     } catch (err) {
       // falling back to IDB
       // also sending error see what's the problem
@@ -426,7 +446,6 @@ class DBHelper {
       const tx = db.transaction('reviews', 'readwrite');
       const store = tx.objectStore('reviews');
 
-
       for (const review of reviews) {
         store.put(review);
       }
@@ -445,20 +464,16 @@ class DBHelper {
       const db = await this.idbPromise;
       if (!db) throw new Error('idbPromise failed to resolve db');
 
-      const tx1 = db.transaction('reviews');
-      const index1 = tx1.objectStore('reviews').index('by-restaurant-id');
-      //async so it won't stop the execution
-      const reviews = index1.getAll(id);
+      const tx = db.transaction('reviews');
+      const index = tx.objectStore('reviews').index('by-restaurant-id');
+      const reviews = index.getAll(id);
 
-      const tx2 = db.transaction('reviews-outbox');
-      const index2 = tx2.objectStore('reviews-outbox').index('by-restaurant-id');
-
-      const pendingReviews = index2.getAll(id);
+      // getting pending reviews, if there are any
+      const pendingReviews = this.getReviewsFromOutbox(id);
 
       // concatenating and returning both
       // reviews and pending reviews
-      return (await pendingReviews)
-        .concat(await reviews);
+      return (await pendingReviews).concat(await reviews);
     } catch (err) {
       console.log(`Erros:\n${error}\n${err}`);
     }
@@ -492,7 +507,6 @@ class DBHelper {
       // in the outbox store when connection is back
       this.indexController.requestPostOutboxSync();
     }
-
   }
 
   /**
@@ -515,25 +529,60 @@ class DBHelper {
     }
   }
 
-  /**
-   * get pending reviews from outbox if they exist
-   * @param {number} id - restaurant id to get reviews for
-   */
-  async getPendingReviews(id) {
+  async getReviewsFromOutbox(id) {
     try {
       const db = await this.idbPromise;
       if (!db) throw new Error('idbPromise failed to resolve db');
 
       const tx = db.transaction('reviews-outbox');
-      const index = tx.objectStore('reviews-outbox').index('by-restaurant-id');
+      const store = tx.objectStore('reviews-outbox');
 
-      const reviews = await index.getAll(id);
-      return reviews;
+      if (!id) return await store.getAll();
+
+      const index = store.index('by-restaurant-id');
+      return await index.getAll(id);
     } catch (err) {
-      console.log(err);
+      console.log(`Failed to get reviews from outbox:\n${err}`);
     }
   }
 
+  /**
+   *
+   * @param {number} id - id of the review to delete
+   */
+  async deleteReviewFromOutbox(id) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const tx = db.transaction('reviews-outbox', 'readwrite');
+      const store = tx.objectStore('reviews-outbox');
+
+      store.delete(id);
+
+      return tx.complete;
+    } catch (err) {
+      console.log(`Failed to delete review from outbox:\n${err}`);
+    }
+  }
+
+  /**
+   * posts pending reviews in the 'reviews-outbox' store
+   */
+  async postOutbox() {
+    try {
+      const pendingReviews = await this.getReviewsFromOutbox();
+      for (const pr of pendingReviews) {
+        const data = Object.assign({}, pr);
+        delete data.id;
+        const createdReview = await this.createNewReview(data);
+        this.addReviewsToIDB([createdReview]);
+        this.deleteReviewFromOutbox(pr.id);
+      }
+    } catch (err) {
+      console.log(`Failed to post reviews in outbox:\n${err}`);
+    }
+  }
 
   /* ================== Utils ================== */
 
@@ -547,16 +596,14 @@ class DBHelper {
    * Restaurant page URL.
    */
   static urlForRestaurant(restaurant) {
-    return (`${BASE_URL}/restaurant.html?id=${restaurant.id}`);
+    return `${BASE_URL}/restaurant.html?id=${restaurant.id}`;
   }
 
   /**
    * Restaurant image URL.
    */
   static imageUrlForRestaurant(photograph, size) {
-    return (
-      `${BASE_URL}/assets/img/${photograph}-${size}w.jpg`
-    );
+    return `${BASE_URL}/assets/img/${photograph}-${size}w.jpg`;
   }
 
   static imageSrcsetForRestaurant(photograph, sizes = []) {
@@ -570,16 +617,17 @@ class DBHelper {
    */
   static mapMarkerForRestaurant(restaurant, map) {
     // https://leafletjs.com/reference-1.3.0.html#marker
-    const marker = new L.marker([restaurant.latlng.lat, restaurant.latlng.lng],
+    const marker = new L.marker(
+      [restaurant.latlng.lat, restaurant.latlng.lng],
       {
         title: restaurant.name,
         alt: restaurant.name,
         url: DBHelper.urlForRestaurant(restaurant)
-      });
+      }
+    );
     marker.addTo(map);
     return marker;
   }
-
 }
 
 export default DBHelper;
