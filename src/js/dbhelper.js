@@ -1,5 +1,6 @@
 import '@babel/polyfill';
 import idb from 'idb';
+import Snackbars from '@salahhamza/snackbars';
 import IndexController from './indexController';
 
 /*
@@ -19,8 +20,10 @@ const BASE_URL = (() => {
 class DBHelper {
   constructor() {
     this.openDatabase();
+
+    this.snackbars = new Snackbars(null, true);
     // initilizing indexController (register service worker)
-    this.indexController = new IndexController();
+    this.indexController = new IndexController(this.snackbars);
     this.indexController.init();
   }
   /**
@@ -503,6 +506,11 @@ class DBHelper {
       return createdReview;
     } catch (err) {
       await this.addReviewToOutbox(review);
+      this.snackbars.show({
+        name: 'defer-offline',
+        message: 'Failed to create review. Don\'t worry, We\'ll try again later!',
+        duration: 4500
+      });
       // request a background sync to post messages
       // in the outbox store when connection is back
       this.indexController.requestPostOutboxSync();
