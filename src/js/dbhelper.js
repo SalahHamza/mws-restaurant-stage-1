@@ -487,10 +487,10 @@ class DBHelper {
 
       return createdReview;
     } catch (err) {
-      this.addReviewToOutbox(review);
+      await this.addReviewToOutbox(review);
       // request a background sync to post messages
       // in the outbox store when connection is back
-      this.indexController.requestPostOutboxSync(review);
+      this.indexController.requestPostOutboxSync();
     }
 
   }
