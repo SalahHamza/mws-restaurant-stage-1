@@ -155,6 +155,9 @@ class MainPage {
     image.alt = `This is an image of the ${restaurant.name} restaurant`;
     li.append(image);
 
+    const favBtn = this.createFavoriteButton(restaurant.is_favorite);
+    li.append(favBtn);
+
     const info = document.createElement('div');
     info.className = 'restaurant-info';
     li.append(info);
@@ -178,6 +181,46 @@ class MainPage {
     info.append(more);
 
     return li;
+  }
+
+  /**
+   * creates favorite restaurant button
+   */
+  createFavoriteButton(isFavorite) {
+    // the reason for this (ternary) is that the dev server
+    // contains an issue that sets the 'is_favorite'
+    // to string "true"/"false" when you send a put request
+    // Note: the initial values were booleans, it only changes
+    // when a PUT request is sent to the favorite restaurant endpoint
+    isFavorite = (isFavorite==='true' || isFavorite===true) ? true : false;
+    const btn = document.createElement('button');
+    btn.className = 'fav-btn';
+    btn.setAttribute('tabindex', '0');
+    btn.setAttribute('aria-label', 'favorite restaurant');
+    // since the favorite button is two state button
+    // we set the role to 'switch'
+    btn.setAttribute('role', 'switch');
+    btn.setAttribute('aria-checked', isFavorite);
+
+    const filledHeart = 'icon-heart';
+    const hollowHeart = 'icon-heart-light';
+    if(isFavorite) {
+      btn.classList.add(filledHeart);
+    } else {
+      btn.classList.add(hollowHeart);
+    }
+    const setHeart = isFav => {
+      if(isFav){
+        btn.classList.add(hollowHeart);
+        btn.classList.remove(filledHeart);
+      } else {
+        btn.classList.remove(hollowHeart);
+        btn.classList.add(filledHeart);
+      }
+    };
+    btn.onmouseover = btn.onfocus = setHeart.bind(null, isFavorite);
+    btn.onmouseout = btn.onblur = setHeart.bind(null, !isFavorite);
+    return btn;
   }
 
   /**********************
