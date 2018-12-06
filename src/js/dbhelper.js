@@ -106,43 +106,15 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      // fetchRestaurants method is called in the openDatabase
-      // method, but since inside openDatabase method
-      // this.idbPromise property is yet to be set, there won't be
-      // any conflic 'await undefined' yields 'undefined'
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      const restaurants = [];
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants');
-
-      // the getAll method sometimes doesn't work in Edge
-      // or it takes a lot of time to get the entries
-      // and since the fetchRestaurants is used to get
-      // cuisines, neighborhoods and the first restaurants
-      // display, we use the iterateCursor method to get all
-      // values of the said store
-      store.iterateCursor(cursor => {
-        if (!cursor) return;
-        restaurants.push(cursor.value);
-        cursor.continue();
-      });
-
-      // pausing the execution of the async function (with await)
-      // until transaction completes & then checking if we got
-      // any cuisines
-      await tx.complete;
-
-      if (!restaurants.length) {
-        const sentError = `Errors:\n${err}
-        No restaurant found in IDB`;
-        callback(sentError, null);
-      } else {
+      const restaurants = await this.getRestaurantsFromIDB();
+      if(restaurants.length){
         callback(null, restaurants);
+        return;
       }
+      callback('No restaurants found in idb', null);
     }
   }
+
 
   /**
    * Fetch a restaurant by its ID.
@@ -154,24 +126,9 @@ class DBHelper {
       const restaurant = await res.json();
       callback(null, restaurant);
 
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      const tx = db.transaction('restaurants', 'readwrite');
-      const store = tx.objectStore('restaurants');
-      store.put(restaurant);
-
-      return tx.complete;
+      this.addRestauransToIDB([restaurant]);
     } catch (err) {
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants');
-
-      // get restaurant with this 'id'
-      const restaurant = await store.get(Number(id));
-
+      const restaurant = await this.getRestaurantByIdFromIDB(id);
       if (!restaurant) {
         const sentError = `Errors:\n${err}
         Restaurant not found in IDB`;
@@ -179,9 +136,9 @@ class DBHelper {
       } else {
         callback(null, restaurant);
       }
-      return tx.complete;
     }
   }
+
 
   /**
    * Fetch restaurants by a cuisine type with proper error handling.
@@ -195,14 +152,7 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      const db = await this.idbPromise;
-      if (!db) return;
-      // const restaurants = [];
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants').index('by-cuisine');
-
-      const restaurants = await store.getAll(cuisine);
-
+      const restaurants = await this.getRestaurantsByCuisinesFromIDB(cuisine);
       if (!restaurants.length) {
         const sentError = `Errors:\n${err}
         No restaurant found in IDB`;
@@ -210,7 +160,6 @@ class DBHelper {
       } else {
         callback(null, restaurants);
       }
-      return tx.complete;
     }
   }
 
@@ -226,14 +175,7 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      // const restaurants = [];
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants').index('by-neighborhood');
-
-      const restaurants = await store.getAll(neighborhood);
+      const restaurants = await this.getRestaurantsByNeighborhoodFromIDB(neighborhood);
 
       if (!restaurants.length) {
         const sentError = `Errors:\n${err}
@@ -242,7 +184,6 @@ class DBHelper {
       } else {
         callback(null, restaurants);
       }
-      return tx.complete;
     }
   }
 
@@ -279,27 +220,12 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      const tx = db.transaction('restaurants');
-      const index = tx.objectStore('restaurants').index('by-neighborhood');
-
-      // get all restaurants with this neighborhood
-      const restaurants = await index.getAll(neighborhood);
-
-      if (!restaurants.length) {
-        const sentError = `Errors:\n${err}
-        No restaurant found in IDB`;
-        callback(sentError, null);
-      } else {
-        // only keeping restaurants with this cuisine_type
-        const wantedRestaurants = restaurants.filter(
-          restaurant => restaurant.cuisine_type === cuisine
-        );
-        callback(null, wantedRestaurants);
+      const restaurants = this.getRestaurantsByCuisineAndNeighborhoodFromIDB(cuisine, neighborhood);
+      if(restaurants.length) {
+        callback(null, restaurants);
+        return;
       }
-      return tx.complete;
+      callback(err, null);
     }
   }
 
@@ -308,23 +234,8 @@ class DBHelper {
    */
   async fetchNeighborhoods(callback) {
     try {
-      // fetching neighborhoods from IDB if they exist
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const neighborhoods = [];
-      const tx = db.transaction('neighborhoods');
-      const store = tx.objectStore('neighborhoods');
-
-      store.iterateCursor(cursor => {
-        if (!cursor) return;
-        neighborhoods.push(cursor.value);
-        cursor.continue();
-      });
-
-      await tx.complete;
-
-      if (!neighborhoods.length) throw new Error('No cuisines found in IDB');
+      const neighborhoods = await this.getNeighborhoodsFromIDB();
+      if(!neighborhoods.length) throw new Error('No neighborhoods in IDB');
       callback(null, neighborhoods);
     } catch (err) {
       // Fetch all restaurants and extract neighborhoods
@@ -362,24 +273,8 @@ class DBHelper {
    */
   async fetchCuisines(callback) {
     try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const cuisines = [];
-      const tx = db.transaction('cuisines');
-      const store = tx.objectStore('cuisines');
-
-      store.iterateCursor(cursor => {
-        if (!cursor) return;
-        cuisines.push(cursor.value);
-        cursor.continue();
-      });
-
-      // pausing the execution of the async function (with await)
-      // until transaction completes & then checking if we got
-      // any cuisines
-      await tx.complete;
-      if (!cuisines.length) throw new Error('No cuisine found in IDB');
+      const cuisines = await this.getCuisinesFromIDB();
+      if(!cuisines.length) throw new Error('No cuisines in IDB');
       callback(null, cuisines);
     } catch (err) {
       // Fetch all restaurants and extract cuisines
@@ -409,25 +304,6 @@ class DBHelper {
     }
   }
 
-  /**
-   * adds restaurant to the 'restaurant' store
-   * @param {Array} restaurants - restaurant objects to add to IDB
-   */
-  async addRestauransToIDB(restaurants) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('restaurants', 'readwrite');
-      const store = tx.objectStore('restaurants');
-      for(const restaurant of restaurants) {
-        store.put(restaurant);
-      }
-      return tx.complete;
-    } catch(err) {
-      console.log(err);
-    }
-  }
 
   /**
    * sends put request to update favorite status of restaurant
@@ -476,6 +352,247 @@ class DBHelper {
   }
 
   /**
+   * Post request to create new review
+   */
+  async createNewReview(review) {
+    try {
+      const url = `${DBHelper.DATABASE_URL}/reviews`;
+      const options = {
+        method: 'POST',
+        cors: 'no-cors',
+        body: JSON.stringify(review)
+      };
+
+      const res = await fetch(url, options);
+
+      if (res.status !== 201) throw new Error('Review wasn\'t created');
+
+      const createdReview = await res.json();
+
+      // adding review to IDB
+      this.addReviewsToIDB([createdReview]);
+
+      return createdReview;
+    } catch (err) {
+      await this.addReviewToOutbox(review);
+      this.snackbars.show({
+        name: 'defer-offline',
+        message: 'Failed to create review. Don\'t worry, We\'ll try again later!',
+        duration: 4500
+      });
+      // request a background sync to post messages
+      // in the outbox store when connection is back
+      this.indexController.requestPostOutboxSync();
+    }
+  }
+
+
+  /**
+   * posts pending reviews in the 'reviews-outbox' store
+   */
+  async postOutbox() {
+    try {
+      const pendingReviews = await this.getReviewsFromOutbox();
+      for (const pr of pendingReviews) {
+        const data = Object.assign({}, pr);
+        delete data.id;
+        const createdReview = await this.createNewReview(data);
+        this.addReviewsToIDB([createdReview]);
+        this.deleteReviewFromOutbox(pr.id);
+      }
+    } catch (err) {
+      console.log(`Failed to post reviews in outbox:\n${err}`);
+    }
+  }
+
+  /* ================== idb Helpers ================== */
+
+
+
+  async getRestaurantsFromIDB() {
+    try {
+
+      // fetchRestaurants method is called in the openDatabase
+      // method, but since inside openDatabase method
+      // this.idbPromise property is yet to be set, there won't be
+      // any conflic 'await undefined' yields 'undefined'
+      const db = await this.idbPromise;
+      if (!db) return;
+
+      const restaurants = [];
+      const tx = db.transaction('restaurants');
+      const store = tx.objectStore('restaurants');
+
+      // the getAll method sometimes doesn't work in Edge
+      // or it takes a lot of time to get the entries
+      // since we get cuisines, neighborhoods, and initial
+      // restaurants with this method, we use the iterateCursor
+      // method to get all restaurants
+      store.iterateCursor(cursor => {
+        if (!cursor) return;
+        restaurants.push(cursor.value);
+        cursor.continue();
+      });
+
+      // pausing the execution of the async function (with await)
+      // until transaction completes & then checking if we got
+      // any cuisines
+      await tx.complete;
+      return restaurants;
+    } catch(err) {
+      console.log(err);
+    }
+  }
+
+
+  async getRestaurantByIdFromIDB(id) {
+    try {
+
+      const db = await this.idbPromise;
+      if (!db) return;
+
+      const tx = db.transaction('restaurants');
+      const store = tx.objectStore('restaurants');
+
+      // get restaurant with this 'id'
+      const restaurant = await store.get(Number(id));
+      return restaurant;
+    } catch(err) {
+      console.log(err);
+    }
+  }
+
+  /**
+   * @param {string} cuisine - cuisine to lookup by
+   * @param {string} neighborhood - neighborhood to lookup by
+   */
+  async getRestaurantsByNeighborhoodFromIDB(neighborhood) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) return;
+
+      const tx = db.transaction('restaurants');
+      const store = tx.objectStore('restaurants').index('by-neighborhood');
+
+      return await store.getAll(neighborhood);
+    } catch(err) {
+      console.log(err);
+    }
+  }
+
+  /**
+   *
+   * @param {string} neighborhood - neighborhood to lookup by
+   */
+  async getRestaurantsByCuisineAndNeighborhoodFromIDB(cuisine, neighborhood) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) return;
+
+      const tx = db.transaction('restaurants');
+      const index = tx.objectStore('restaurants').index('by-neighborhood');
+
+      // get all restaurants with this neighborhood
+      const restaurants = await index.getAll(neighborhood);
+
+      // only keeping restaurants with this cuisine_type
+      return restaurants.filter(
+        restaurant => restaurant.cuisine_type === cuisine
+      );
+    } catch(err) {
+      console.log(err);
+    }
+  }
+
+  /**
+   *
+   * @param {string} cuisine - cuisine to lookup by
+   */
+  async getRestaurantsByCuisinesFromIDB(cuisine) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) return;
+
+      const tx = db.transaction('restaurants');
+      const store = tx.objectStore('restaurants').index('by-cuisine');
+
+      return await store.getAll(cuisine);
+    } catch(err) {
+      console.log(err);
+    }
+  }
+
+  async getNeighborhoodsFromIDB() {
+    try {
+      // fetching neighborhoods from IDB if they exist
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const neighborhoods = [];
+      const tx = db.transaction('neighborhoods');
+      const store = tx.objectStore('neighborhoods');
+
+      store.iterateCursor(cursor => {
+        if (!cursor) return;
+        neighborhoods.push(cursor.value);
+        cursor.continue();
+      });
+
+      await tx.complete;
+
+      return neighborhoods;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async getCuisinesFromIDB() {
+    try {
+
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const cuisines = [];
+      const tx = db.transaction('cuisines');
+      const store = tx.objectStore('cuisines');
+
+      store.iterateCursor(cursor => {
+        if (!cursor) return;
+        cuisines.push(cursor.value);
+        cursor.continue();
+      });
+
+      // pausing the execution of the async function (with await)
+      // until transaction completes & then checking if we got
+      // any cuisines
+      await tx.complete;
+      return cuisines;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  /**
+   * adds restaurant to the 'restaurant' store
+   * @param {Array} restaurants - restaurant objects to add to IDB
+   */
+  async addRestauransToIDB(restaurants) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const tx = db.transaction('restaurants', 'readwrite');
+      const store = tx.objectStore('restaurants');
+      for(const restaurant of restaurants) {
+        store.put(restaurant);
+      }
+      return tx.complete;
+    } catch(err) {
+      console.log(err);
+    }
+  }
+
+  /**
    *
    * @param {Array} reviews - reviews to add to IDB
    */
@@ -520,40 +637,6 @@ class DBHelper {
     }
   }
 
-  /**
-   * Post request to create new review
-   */
-  async createNewReview(review) {
-    try {
-      const url = `${DBHelper.DATABASE_URL}/reviews`;
-      const options = {
-        method: 'POST',
-        cors: 'no-cors',
-        body: JSON.stringify(review)
-      };
-
-      const res = await fetch(url, options);
-
-      if (res.status !== 201) throw new Error('Review wasn\'t created');
-
-      const createdReview = await res.json();
-
-      // adding review to IDB
-      this.addReviewsToIDB([createdReview]);
-
-      return createdReview;
-    } catch (err) {
-      await this.addReviewToOutbox(review);
-      this.snackbars.show({
-        name: 'defer-offline',
-        message: 'Failed to create review. Don\'t worry, We\'ll try again later!',
-        duration: 4500
-      });
-      // request a background sync to post messages
-      // in the outbox store when connection is back
-      this.indexController.requestPostOutboxSync();
-    }
-  }
 
   /**
    * adds the given review to the outbox (pending reviews) store
@@ -574,6 +657,7 @@ class DBHelper {
       console.log(err);
     }
   }
+
 
   async getReviewsFromOutbox(id) {
     try {
@@ -612,23 +696,6 @@ class DBHelper {
     }
   }
 
-  /**
-   * posts pending reviews in the 'reviews-outbox' store
-   */
-  async postOutbox() {
-    try {
-      const pendingReviews = await this.getReviewsFromOutbox();
-      for (const pr of pendingReviews) {
-        const data = Object.assign({}, pr);
-        delete data.id;
-        const createdReview = await this.createNewReview(data);
-        this.addReviewsToIDB([createdReview]);
-        this.deleteReviewFromOutbox(pr.id);
-      }
-    } catch (err) {
-      console.log(`Failed to post reviews in outbox:\n${err}`);
-    }
-  }
 
   /* ================== Utils ================== */
 
