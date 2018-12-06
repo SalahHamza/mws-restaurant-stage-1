@@ -488,6 +488,10 @@ nav {
   line-height: 1.1;
 }
 
+.restaurant-img-container {
+  position: relative;
+}
+
 .restaurant-img {
   border-radius: 3px 3px 0 0;
   min-width: 100%;

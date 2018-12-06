@@ -11,7 +11,8 @@ class RestaurantInfo {
    */
   initMap(mapboxToken) {
     this.fetchRestaurantFromURL((error, restaurant) => {
-      if (error) { // Got an error!
+      if (error) {
+        // Got an error!
         console.error(error);
       } else {
         this.newMap = L.map('map', {
@@ -19,27 +20,31 @@ class RestaurantInfo {
           zoom: 16,
           scrollWheelZoom: false
         });
-        L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.jpg70?access_token={mapboxToken}', {
-          mapboxToken,
-          maxZoom: 18,
-          attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
-            '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
-            'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-          id: 'mapbox.streets'
-        }).addTo(this.newMap);
+        L.tileLayer(
+          'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.jpg70?access_token={mapboxToken}',
+          {
+            mapboxToken,
+            maxZoom: 18,
+            attribution:
+              'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+              '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+              'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+            id: 'mapbox.streets'
+          }
+        ).addTo(this.newMap);
 
         DBHelper.mapMarkerForRestaurant(this.restaurant, this.newMap);
       }
     });
   }
 
-
   /**
    * Get current restaurant from page URL.
    */
   fetchRestaurantFromURL(callback) {
     const id = this.getParameterByName('id');
-    if (!id) { // no id found in URL
+    if (!id) {
+      // no id found in URL
       const error = 'No restaurant id in URL';
       this.handleRestaurantNotFound();
       callback(error, null);
@@ -59,7 +64,6 @@ class RestaurantInfo {
       callback(null, restaurant);
     });
   }
-
 
   /**
    * Shows a message when request restaurant 'id' is not found
@@ -120,12 +124,97 @@ class RestaurantInfo {
       this.fillRestaurantHoursHTML();
     }
 
+    this.configFavoriteButton(this.restaurant.is_favorite, this.restaurant.id);
   }
 
+  /**
+   * configurates favorite button's event listeners and status
+   * (i.e. favorited or not)
+   * @param {boolean|string} isFavorite - restaurant favorite status
+   * @param {number} id - restaurant id to create button for
+   */
+  configFavoriteButton(isFavorite, id) {
+    // the reason for this (ternary) is that the dev server
+    // contains an issue that sets the 'is_favorite'
+    // to string "true"/"false" when you send a put request
+    // Note: the initial values were booleans, it only changes
+    // when a PUT request is sent to the favorite restaurant endpoint
+    isFavorite = isFavorite === 'true' || isFavorite === true ? true : false;
+    const btn = document.querySelector('.fav-btn');
+    btn.setAttribute('aria-checked', isFavorite);
+
+    const filledHeart = 'icon-heart';
+    const hollowHeart = 'icon-heart-light';
+    if (isFavorite) {
+      btn.classList.add(filledHeart);
+    } else {
+      btn.classList.add(hollowHeart);
+    }
+    const setHeart = isFav => {
+      if (isFav) {
+        btn.classList.add(hollowHeart);
+        btn.classList.remove(filledHeart);
+      } else {
+        btn.classList.remove(hollowHeart);
+        btn.classList.add(filledHeart);
+      }
+    };
+    btn.onmouseover = btn.onfocus = setHeart.bind(null, isFavorite);
+    btn.onmouseout = btn.onblur = setHeart.bind(null, !isFavorite);
+    btn.onclick = this.handleFavoriteButtonClick.bind(
+      this,
+      id,
+      isFavorite,
+      setHeart
+    );
+  }
+
+  /**
+   * update restaurant favorite state and button style
+   * @param {number} id - restaurant id to favorite/unfavorite
+   * @param {Boolean} isFavorite - respresents whether button is favorited or not
+   * @param {function} setHeart - util function to update button (heart) state
+   * @param {Object} event - event object
+   */
+  async handleFavoriteButtonClick(id, isFavorite, setHeart, event) {
+    try {
+      const newStatus = !isFavorite;
+      const restaurant = await this.dbHelper.updateRestaurantFavoriteStatus(
+        id,
+        newStatus
+      );
+      if (!restaurant) return;
+      const message = newStatus
+        ? 'You favorited restaurant'
+        : 'You unfavorited restaurant';
+
+      this.dbHelper.snackbars.show({
+        name: 'fav-restaurant',
+        message,
+        duration: 3500
+      });
+      // since now the restaurant state changed
+      // all the events that were set in 'createFavoriteButton()'
+      // are wrong and should be updated
+      const btn = event.target;
+      btn.onmouseover = btn.onfocus = setHeart.bind(null, newStatus);
+      btn.onmouseout = btn.onblur = setHeart.bind(null, !newStatus);
+      btn.onclick = this.handleFavoriteButtonClick.bind(
+        this,
+        id,
+        newStatus,
+        setHeart
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  }
 
   async fetchReviews() {
     try {
-      const reviews = await this.dbHelper.fetchReviewsForRestaurantId(this.restaurant.id);
+      const reviews = await this.dbHelper.fetchReviewsForRestaurantId(
+        this.restaurant.id
+      );
       this.restaurant.reviews = reviews;
       // fill reviews
       this.fillReviewsHTML();
@@ -133,8 +222,6 @@ class RestaurantInfo {
       console.log(err);
     }
   }
-
-
 
   /**
    * Create restaurant operating hours HTML table and add it to the webpage.
@@ -150,7 +237,6 @@ class RestaurantInfo {
         it from from iterating over the prototype chain
       */
       if (operatingHours.hasOwnProperty(key)) {
-
         const row = document.createElement('tr');
         row.setAttribute('tabindex', '0');
 
@@ -181,7 +267,10 @@ class RestaurantInfo {
     newReviewButton.className = 'new-review btn';
     newReviewButton.innerHTML = 'Add new review';
     newReviewButton.setAttribute('type', 'button');
-    newReviewButton.addEventListener('click', this.handleNewReviewClick.bind(this));
+    newReviewButton.addEventListener(
+      'click',
+      this.handleNewReviewClick.bind(this)
+    );
     container.appendChild(newReviewButton);
 
     if (!this.restaurant.reviews) {
@@ -204,7 +293,9 @@ class RestaurantInfo {
     const formContainer = document.querySelector('.review-form-wrapper');
     if (!this.pageHasForm) {
       // maybe I'll need to request an animation frame here
-      formContainer.appendChild(this.createReviewForm(this.handleReviewSubmission.bind(this)));
+      formContainer.appendChild(
+        this.createReviewForm(this.handleReviewSubmission.bind(this))
+      );
       this.pageHasForm = true;
     }
     formContainer.classList.add('visible');
@@ -221,20 +312,21 @@ class RestaurantInfo {
     const form = document.createElement('form');
     form.className = 'review-form-container';
 
-    const nameFieldHTML =
-      `<label class="form-item">
+    const nameFieldHTML = `<label class="form-item">
       <span class="form-item-label">Name:</span>
       <input name="name" type="text" placeholder="John"/>
     </label>`;
 
-    const starsHTML = [1, 2, 3, 4, 5].map(i =>
-      (`<input value="${i}" id="star${i}"
+    const starsHTML = [1, 2, 3, 4, 5]
+      .map(
+        i => `<input value="${i}" id="star${i}"
         type="radio" name="rating" class="sr-only">
       <label for="star${i}">
         <span class="sr-only">${i} Star rating</span>
         <span class="icon">★</span>
-      </label>`)
-    ).join('');
+      </label>`
+      )
+      .join('');
 
     //html for the star rating fieldset
     const ratingFieldHTML = `<fieldset class="form-item rating">
@@ -247,8 +339,7 @@ class RestaurantInfo {
     ${starsHTML}
     </fieldset>`;
 
-    const commentFieldHTML =
-      `<label class="form-item">
+    const commentFieldHTML = `<label class="form-item">
     <span class="form-item-label">Comments:</span>
     <textarea
       placeholder="Your comments (in 20 letters or more)s"
@@ -266,23 +357,21 @@ class RestaurantInfo {
     >Submit</button>
     </span>`;
 
-    form.innerHTML =
-      `<h3>Tell people what you think!</h3>
+    form.innerHTML = `<h3>Tell people what you think!</h3>
     ${nameFieldHTML}
     ${ratingFieldHTML}
     ${commentFieldHTML}
     ${btnFieldHTML}`;
 
     // hide review form on cancel button click
-    form.querySelector('.btn.form-cancel')
-      .onclick = () => {
-        document.querySelector('.review-form-wrapper')
-          .classList.remove('visible');
-      };
+    form.querySelector('.btn.form-cancel').onclick = () => {
+      document
+        .querySelector('.review-form-wrapper')
+        .classList.remove('visible');
+    };
 
     // handle form submission on click
-    form.querySelector('.btn.form-submit')
-      .onclick = handleSubmit;
+    form.querySelector('.btn.form-submit').onclick = handleSubmit;
 
     return form;
   }
@@ -315,7 +404,8 @@ class RestaurantInfo {
   onReviewData(review) {
     // inserting new review at the start of the review list
     const el = this.createReviewHTML(review);
-    document.querySelector('.reviews-list')
+    document
+      .querySelector('.reviews-list')
       .insertAdjacentElement('afterbegin', el);
 
     // closing and clearnig the form
@@ -326,7 +416,6 @@ class RestaurantInfo {
     el.setAttribute('tabindex', '0');
     el.focus();
   }
-
 
   /**
    * validate form field and get their values
@@ -349,7 +438,8 @@ class RestaurantInfo {
     const ratingElem = formContainer.querySelector('fieldset');
     const ratingValue = Number(ratingElem.querySelector('input:checked').value);
     if (!ratingValue) {
-      const message = 'Either the restaurant is <em>really</em> bad or you forgot to rate!';
+      const message =
+        'Either the restaurant is <em>really</em> bad or you forgot to rate!';
       this.handleEmptyFormField(ratingElem, message);
       return;
     }
@@ -401,7 +491,6 @@ class RestaurantInfo {
     fieldNode.addEventListener('focus', hideWarning);
     fieldNode.addEventListener('click', hideWarning);
   }
-
 
   /**
    * Create review HTML and add it to the webpage.
@@ -476,10 +565,8 @@ class RestaurantInfo {
     name = name.replace(sanitizePattern, '\\$&');
     const regex = new RegExp(`[?&]${name}(=([^&#]*)|&|#|$)`);
     const results = regex.exec(url);
-    if (!results)
-      return null;
-    if (!results[2])
-      return '';
+    if (!results) return null;
+    if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, ' '));
   }
 
