@@ -410,6 +410,26 @@ class DBHelper {
   }
 
   /**
+   * adds restaurant to the 'restaurant' store
+   * @param {Array} restaurants - restaurant objects to add to IDB
+   */
+  async addRestauransToIDB(restaurants) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const tx = db.transaction('restaurants', 'readwrite');
+      const store = tx.objectStore('restaurants');
+      for(const restaurant of restaurants) {
+        store.put(restaurant);
+      }
+      return tx.complete;
+    } catch(err) {
+      console.log(err);
+    }
+  }
+
+  /**
    * sends put request to update favorite status of restaurant
    * @param {number} id - restaurant id to update
    * @param {Boolean} newStatus - new status (true/false) to update server with
@@ -419,7 +439,9 @@ class DBHelper {
       const url = `${DBHelper.DATABASE_URL}/restaurants/${id}?is_favorite=${newStatus}`;
       const res = await fetch(url, { method: 'PUT' });
       if(res.status !== 200) throw new Error('Restaurant favorite status not updated');
-      return await res.json();
+      const restaurant = await res.json();
+      this.addRestauransToIDB([restaurant]);
+      return restaurant;
     } catch(err) {
       console.log(err);
     }
