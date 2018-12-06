@@ -17,7 +17,8 @@ class MainPage {
    */
   fetchNeighborhoods() {
     this.dbHelper.fetchNeighborhoods((error, neighborhoods) => {
-      if (error) { // Got an error
+      if (error) {
+        // Got an error
         console.error(error);
       } else {
         this.neighborhoods = neighborhoods;
@@ -31,7 +32,8 @@ class MainPage {
    */
   fetchCuisines() {
     this.dbHelper.fetchCuisines((error, cuisines) => {
-      if (error) { // Got an error!
+      if (error) {
+        // Got an error!
         console.error(error);
       } else {
         this.cuisines = cuisines;
@@ -71,7 +73,6 @@ class MainPage {
     });
   }
 
-
   /**
    * Update page and map for current restaurants.
    */
@@ -85,16 +86,20 @@ class MainPage {
     const cuisine = cSelect[cIndex].value;
     const neighborhood = nSelect[nIndex].value;
 
-    this.dbHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, restaurants) => {
-      if (error) { // Got an error!
-        console.error(error);
-      } else {
-        this.resetRestaurants(restaurants);
-        this.fillRestaurantsHTML();
+    this.dbHelper.fetchRestaurantByCuisineAndNeighborhood(
+      cuisine,
+      neighborhood,
+      (error, restaurants) => {
+        if (error) {
+          // Got an error!
+          console.error(error);
+        } else {
+          this.resetRestaurants(restaurants);
+          this.fillRestaurantsHTML();
+        }
       }
-    });
+    );
   }
-
 
   /**
    * Clear current restaurants, their HTML and remove their map markers.
@@ -112,7 +117,6 @@ class MainPage {
     this.markers = [];
     this.restaurants = restaurants;
   }
-
 
   /**
   /**
@@ -155,6 +159,12 @@ class MainPage {
     image.alt = `This is an image of the ${restaurant.name} restaurant`;
     li.append(image);
 
+    const favBtn = this.createFavoriteButton(
+      restaurant.is_favorite,
+      restaurant.id
+    );
+    li.append(favBtn);
+
     const info = document.createElement('div');
     info.className = 'restaurant-info';
     li.append(info);
@@ -180,6 +190,95 @@ class MainPage {
     return li;
   }
 
+  /**
+   * creates favorite restaurant button
+   * @param {boolean|string} isFavorite - restaurant favorite status
+   * @param {number} id - restaurant id to create button for
+   */
+  createFavoriteButton(isFavorite, id) {
+    // the reason for this (ternary) is that the dev server
+    // contains an issue that sets the 'is_favorite'
+    // to string "true"/"false" when you send a put request
+    // Note: the initial values were booleans, it only changes
+    // when a PUT request is sent to the favorite restaurant endpoint
+    isFavorite = isFavorite === 'true' || isFavorite === true ? true : false;
+    const btn = document.createElement('button');
+    btn.className = 'fav-btn';
+    btn.setAttribute('tabindex', '0');
+    btn.setAttribute('aria-label', 'favorite restaurant');
+    // since the favorite button is two state button
+    // we set the role to 'switch'
+    btn.setAttribute('role', 'switch');
+    btn.setAttribute('aria-checked', isFavorite);
+
+    const filledHeart = 'icon-heart';
+    const hollowHeart = 'icon-heart-light';
+    if (isFavorite) {
+      btn.classList.add(filledHeart);
+    } else {
+      btn.classList.add(hollowHeart);
+    }
+    const setHeart = isFav => {
+      if (isFav) {
+        btn.classList.add(hollowHeart);
+        btn.classList.remove(filledHeart);
+      } else {
+        btn.classList.remove(hollowHeart);
+        btn.classList.add(filledHeart);
+      }
+    };
+    btn.onmouseover = btn.onfocus = setHeart.bind(null, isFavorite);
+    btn.onmouseout = btn.onblur = setHeart.bind(null, !isFavorite);
+    btn.onclick = this.handleFavoriteButtonClick.bind(
+      this,
+      id,
+      isFavorite,
+      setHeart
+    );
+    return btn;
+  }
+
+  /**
+   * update restaurant favorite state and button style
+   * @param {number} id - restaurant id to favorite/unfavorite
+   * @param {Boolean} isFavorite - respresents whether button is favorited or not
+   * @param {function} setHeart - util function to update button (heart) state
+   * @param {Object} event - event object
+   */
+  async handleFavoriteButtonClick(id, isFavorite, setHeart, event) {
+    try {
+      const newStatus = !isFavorite;
+      const restaurant = await this.dbHelper.updateRestaurantFavoriteStatus(
+        id,
+        newStatus
+      );
+      if (!restaurant) return;
+      const message = newStatus
+        ? 'You favorited restaurant'
+        : 'You unfavorited restaurant';
+
+      this.dbHelper.snackbars.show({
+        name: 'fav-restaurant',
+        message,
+        duration: 3500
+      });
+      // since now the restaurant state changed
+      // all the events that were set in 'createFavoriteButton()'
+      // are wrong and should be updated
+      const btn = event.target;
+      btn.onmouseover = btn.onfocus = setHeart.bind(null, newStatus);
+      btn.onmouseout = btn.onblur = setHeart.bind(null, !newStatus);
+      btn.onclick = this.handleFavoriteButtonClick.bind(
+        this,
+        id,
+        newStatus,
+        setHeart
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
   /**********************
           MAP
   **********************/
@@ -192,17 +291,19 @@ class MainPage {
       zoom: 12,
       scrollWheelZoom: false
     });
-    L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.jpg70?access_token={mapboxToken}', {
-      mapboxToken,
-      maxZoom: 18,
-      attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
-        '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
-        'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-      id: 'mapbox.streets'
-    }).addTo(this.newMap);
-
+    L.tileLayer(
+      'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.jpg70?access_token={mapboxToken}',
+      {
+        mapboxToken,
+        maxZoom: 18,
+        attribution:
+          'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+          '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+          'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        id: 'mapbox.streets'
+      }
+    ).addTo(this.newMap);
   }
-
 
   /**
    * Add markers for current restaurants to the map.
@@ -219,11 +320,9 @@ class MainPage {
     });
   }
 
-
   /**********************
       Initialization
   **********************/
-
 
   init() {
     /**
@@ -238,13 +337,14 @@ class MainPage {
       this.updateRestaurants();
 
       /* listen for select elements and update Restaurants */
-      document.querySelector('.filter-options').addEventListener('change',(e) => {
-        if(e.target.id.includes('-select')) {
-          this.updateRestaurants();
-          e.stopPropagation();
-        }
-      });
-
+      document
+        .querySelector('.filter-options')
+        .addEventListener('change', e => {
+          if (e.target.id.includes('-select')) {
+            this.updateRestaurants();
+            e.stopPropagation();
+          }
+        });
     });
   }
 }

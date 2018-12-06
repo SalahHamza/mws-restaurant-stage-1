@@ -108,6 +108,10 @@ main {
   min-height: 100%;
 }
 
+button {
+  cursor: pointer;
+}
+
 /* replace #footer with footer since it's unique */
 footer {
   background-color: var(--primary-color-dr);
@@ -339,6 +343,21 @@ nav {
   border-radius: 1px;
 }
 
+.restaurant-item {
+  position: relative;
+}
+
+.fav-btn {
+  color: #fff;
+  position: absolute;
+  font-size: 3em;
+  top: 5px;
+  right: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
 .restaurant-info {
   padding: 16px;
 }
@@ -469,6 +488,10 @@ nav {
   line-height: 1.1;
 }
 
+.restaurant-img-container {
+  position: relative;
+}
+
 .restaurant-img {
   border-radius: 3px 3px 0 0;
   min-width: 100%;
@@ -563,7 +586,6 @@ nav {
 }
 
 .btn {
-  cursor: pointer;
   padding: 12px 30px;
   text-transform: uppercase;
   transition: box-shadow .5s ease, background .5s ease;
@@ -683,15 +705,6 @@ nav {
 
 .btn-container {
   text-align: right;
-}
-
-.btn {
-  cursor: pointer;
-  padding: 12px 30px;
-  text-transform: uppercase;
-  transition: box-shadow .5s ease, background .5s ease;
-  border-radius: 2px;
-  border: none;
 }
 
 .btn.form-submit {
