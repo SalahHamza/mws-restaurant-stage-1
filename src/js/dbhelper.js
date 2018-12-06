@@ -410,6 +410,22 @@ class DBHelper {
   }
 
   /**
+   * sends put request to update favorite status of restaurant
+   * @param {number} id - restaurant id to update
+   * @param {Boolean} newStatus - new status (true/false) to update server with
+   */
+  async updateRestaurantFavoriteStatus(id, newStatus) {
+    try {
+      const url = `${DBHelper.DATABASE_URL}/restaurants/${id}?is_favorite=${newStatus}`;
+      const res = await fetch(url, { method: 'PUT' });
+      if(res.status !== 200) throw new Error('Restaurant favorite status not updated');
+      return await res.json();
+    } catch(err) {
+      console.log(err);
+    }
+  }
+
+  /**
    * Fetch all reviews for specific restaurant
    */
   async fetchReviewsForRestaurantId(id) {
