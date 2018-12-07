@@ -63,7 +63,9 @@ class DBHelper {
       callback(null, restaurants);
       return;
     } catch (err) {
-      const restaurants = await this.idbHelper.getAllItemsFromStore('restaurants');
+      const restaurants = await this.idbHelper.getAllItemsFromStore(
+        'restaurants'
+      );
       if (restaurants.length) {
         callback(null, restaurants);
         return;
@@ -84,7 +86,10 @@ class DBHelper {
 
       this.idbHelper.putItemsToStore([restaurant], 'restaurants');
     } catch (err) {
-      const restaurant = await this.idbHelper.getOneItemFromStore('restaurants', Number(id));
+      const restaurant = await this.idbHelper.getOneItemFromStore(
+        'restaurants',
+        Number(id)
+      );
       if (!restaurant) {
         const sentError = `Errors:\n${err}
         Restaurant not found in IDB`;
@@ -208,7 +213,9 @@ class DBHelper {
    */
   async fetchNeighborhoods(callback) {
     try {
-      const neighborhoods = await this.idbHelper.getAllItemsFromStore('neighborhoods');
+      const neighborhoods = await this.idbHelper.getAllItemsFromStore(
+        'neighborhoods'
+      );
 
       if (!neighborhoods.length) throw new Error('No neighborhoods in IDB');
       callback(null, neighborhoods);
@@ -229,7 +236,11 @@ class DBHelper {
           (v, i) => neighborhoods.indexOf(v) == i
         );
         callback(null, uniqueNeighborhoods);
-        this.idbHelper.putItemsToStore(uniqueNeighborhoods, 'neighborhoods', true);
+        this.idbHelper.putItemsToStore(
+          uniqueNeighborhoods,
+          'neighborhoods',
+          true
+        );
       });
     }
   }
@@ -379,13 +390,14 @@ class DBHelper {
    */
   async postOutbox() {
     try {
-      const pendingReviews = await this.idbHelper.getAllItemsFromStore('reviews-outbox');
+      const pendingReviews = await this.idbHelper.getAllItemsFromStore(
+        'reviews-outbox'
+      );
       for (const pr of pendingReviews) {
         const data = Object.assign({}, pr);
         delete data.id;
-        const createdReview = await this.createNewReview(data);
-        this.idbHelper.putItemsToStore([createdReview], 'reviews');
-        this.idbHelper.deleteReviewFromOutbox(pr.id);
+        await this.createNewReview(data);
+        this.idbHelper.deleteItemFromStore('reviews-outbox', pr.id);
       }
     } catch (err) {
       console.log(`Failed to post reviews in outbox:\n${err}`);

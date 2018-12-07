@@ -1,7 +1,6 @@
 import idb from 'idb';
 
 export default class IDBHelper {
-
   constructor() {
     this.idbPromise = this.openDatabase();
   }
@@ -58,7 +57,7 @@ export default class IDBHelper {
    * requires a key in order to be added/updated. If yes, the item itself will be
    * the key as well. Defaults to false.
    */
-  async putItemsToStore(items, storeName, withKey=false) {
+  async putItemsToStore(items, storeName, withKey = false) {
     try {
       const db = await this.idbPromise;
       if (!db) return;
@@ -66,17 +65,17 @@ export default class IDBHelper {
       const tx = db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
 
-      if(withKey) {
-        for(const item of items) {
+      if (withKey) {
+        for (const item of items) {
           store.put(item, item);
         }
       } else {
-        for(const item of items) {
+        for (const item of items) {
           store.put(item);
         }
       }
 
-      console.log('added items to ', storeName, ' store');
+      console.log('added/updated items to', storeName, 'store');
 
       return tx.complete;
     } catch (err) {
@@ -100,7 +99,7 @@ export default class IDBHelper {
 
       console.log(`Getting one item from store '${storeName}' with key=${key}`);
       return await store.get(key);
-    } catch(err) {
+    } catch (err) {
       console.log(err);
     }
   }
@@ -117,11 +116,13 @@ export default class IDBHelper {
 
       const tx = db.transaction(storeName);
       const store = tx.objectStore(storeName);
-      console.log(`Getting all items from store '${storeName}' with ${key||'no key'}`);
-      if(key) return await store.getAll(key);
+      console.log(
+        `Getting all items from store '${storeName}' with ${key || 'no key'}`
+      );
+      if (key) return await store.getAll(key);
 
       return await store.getAll();
-    } catch(err) {
+    } catch (err) {
       console.log(err);
     }
   }
@@ -139,33 +140,37 @@ export default class IDBHelper {
 
       const tx = db.transaction(storeName);
       const index = tx.objectStore(storeName).index(indexName);
-      console.log(`Getting all items from store'${storeName}' by index ${indexName} with ${key||'no key'}`);
-      if(key) return await index.getAll(key);
+      console.log(
+        `Getting all items from store'${storeName}' by index ${indexName} with ${key ||
+          'no key'}`
+      );
+      if (key) return await index.getAll(key);
 
       return await index.getAll();
-    } catch(err) {
+    } catch (err) {
       console.log(err);
     }
   }
 
   /**
-   *
-   * @param {number} id - id of the review to delete
+   * deletes one item (with given key) from IDB store
+   * @param {String} storeName - The name of the store to open
+   * @param {*} key - key of item to delete
    */
-  async deleteReviewFromOutbox(id) {
+  async deleteItemFromStore(storeName, key) {
     try {
       const db = await this.idbPromise;
       if (!db) if (!db) return;
 
-      const tx = db.transaction('reviews-outbox', 'readwrite');
-      const store = tx.objectStore('reviews-outbox');
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
 
-      store.delete(id);
+      store.delete(key);
+      console.log(`Deleted one item from ${storeName} store with key=${key}`);
 
       return tx.complete;
     } catch (err) {
-      console.log(`Failed to delete review from outbox:\n${err}`);
+      console.log(err);
     }
   }
-
 }
