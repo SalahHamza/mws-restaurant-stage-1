@@ -61,8 +61,9 @@ class DBHelper {
       const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants`);
       const restaurants = await res.json();
       callback(null, restaurants);
+      return;
     } catch (err) {
-      const restaurants = await this.idbHelper.getRestaurants();
+      const restaurants = await this.idbHelper.getAllItemsFromStore('restaurants');
       if (restaurants.length) {
         callback(null, restaurants);
         return;
@@ -83,7 +84,7 @@ class DBHelper {
 
       this.idbHelper.putItemsToStore([restaurant], 'restaurants');
     } catch (err) {
-      const restaurant = await this.idbHelper.getRestaurantById(id);
+      const restaurant = await this.idbHelper.getOneItemFromStore('restaurants', Number(id));
       if (!restaurant) {
         const sentError = `Errors:\n${err}
         Restaurant not found in IDB`;
@@ -106,7 +107,10 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      const restaurants = await this.idbHelper.getRestaurantsByCuisines(
+      // getting restaurants from 'restaurants' store by cuisines
+      const restaurants = await this.idbHelper.getAllItemsFromIndex(
+        'restaurants',
+        'by-cuisine',
         cuisine
       );
       if (!restaurants.length) {
@@ -131,10 +135,12 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      const restaurants = await this.idbHelper.getRestaurantsByNeighborhood(
+      // getting restaurants from 'restaurants' store by neighborhoods
+      const restaurants = await this.idbHelper.getAllItemsFromIndex(
+        'restaurants',
+        'by-neighborhood',
         neighborhood
       );
-
       if (!restaurants.length) {
         const sentError = `Errors:\n${err}
         No restaurant found in IDB`;
@@ -178,10 +184,17 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      const restaurants = await this.idbHelper.getRestaurantsByCuisineAndNeighborhood(
-        cuisine,
+      // getting restaurants from 'restaurants' store by neighborhood
+      let restaurants = await this.idbHelper.getAllItemsFromIndex(
+        'restaurants',
+        'by-neighborhood',
         neighborhood
       );
+      // only keeping the restaurants with this cuisine type
+      restaurants = restaurants.filter(
+        restaurant => restaurant.cuisine_type === cuisine
+      );
+
       if (restaurants.length) {
         callback(null, restaurants);
         return;
@@ -195,7 +208,7 @@ class DBHelper {
    */
   async fetchNeighborhoods(callback) {
     try {
-      const neighborhoods = await this.idbHelper.getNeighborhoods();
+      const neighborhoods = await this.idbHelper.getAllItemsFromStore('neighborhoods');
 
       if (!neighborhoods.length) throw new Error('No neighborhoods in IDB');
       callback(null, neighborhoods);
@@ -226,7 +239,7 @@ class DBHelper {
    */
   async fetchCuisines(callback) {
     try {
-      const cuisines = await this.idbHelper.getCuisines();
+      const cuisines = await this.idbHelper.getAllItemsFromStore('cuisines');
 
       if (!cuisines.length) throw new Error('No cuisines in IDB');
       callback(null, cuisines);
@@ -277,14 +290,21 @@ class DBHelper {
    */
   async fetchReviewsForRestaurantId(id) {
     try {
-      // we get the pending reviews promise if there are any
-      const pendingReviews = this.idbHelper.getReviewsFromOutbox(id);
       const res = await fetch(
         `${DBHelper.DATABASE_URL}/reviews?restaurant_id=${id}`
       );
       const reviews = await res.json();
       // add newly fetched reviews to 'reviews' store
       this.idbHelper.putItemsToStore(reviews, 'reviews');
+
+      // if by any chance the outbox reviews weren't posted in
+      // the (background) sync event, we want to show them first,
+      // then try and post them again
+      const pendingReviews = this.idbHelper.getAllItemsFromIndex(
+        'reviews-outbox',
+        'by-restaurant-id',
+        id
+      );
 
       // post reviews in outbox store just in case
       // they weren't added in the sync event
@@ -294,12 +314,25 @@ class DBHelper {
       // with internet (the success of the fetch event gives that out)
       this.postOutbox();
 
-      return DBHelper.sortByDate(reviews.concat(await pendingReviews));
+      const allReviews = reviews.concat(await pendingReviews);
+
+      return DBHelper.sortByDate(allReviews);
     } catch (err) {
       // falling back to IDB
       // also sending error to see what's the problem
-      const reviews = await this.idbHelper.getReviews(id, err);
-      return DBHelper.sortByDate(reviews);
+      const reviews = this.idbHelper.getAllItemsFromIndex(
+        'reviews',
+        'by-restaurant-id',
+        id
+      );
+      const pendingReviews = this.idbHelper.getAllItemsFromIndex(
+        'reviews-outbox',
+        'by-restaurant-id',
+        id
+      );
+
+      const allReviews = (await reviews).concat(await pendingReviews);
+      return DBHelper.sortByDate(allReviews);
     }
   }
 
@@ -346,7 +379,7 @@ class DBHelper {
    */
   async postOutbox() {
     try {
-      const pendingReviews = await this.idbHelper.getReviewsFromOutbox();
+      const pendingReviews = await this.idbHelper.getAllItemsFromStore('reviews-outbox');
       for (const pr of pendingReviews) {
         const data = Object.assign({}, pr);
         delete data.id;
