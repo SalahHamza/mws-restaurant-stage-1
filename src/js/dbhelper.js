@@ -81,7 +81,7 @@ class DBHelper {
       const restaurant = await res.json();
       callback(null, restaurant);
 
-      this.idbHelper.addRestaurants([restaurant]);
+      this.idbHelper.putItemsToStore([restaurant], 'restaurants');
     } catch (err) {
       const restaurant = await this.idbHelper.getRestaurantById(id);
       if (!restaurant) {
@@ -216,7 +216,7 @@ class DBHelper {
           (v, i) => neighborhoods.indexOf(v) == i
         );
         callback(null, uniqueNeighborhoods);
-        this.idbHelper.addNeighborhoods(uniqueNeighborhoods);
+        this.idbHelper.putItemsToStore(uniqueNeighborhoods, 'neighborhoods', true);
       });
     }
   }
@@ -245,7 +245,7 @@ class DBHelper {
           (v, i) => cuisines.indexOf(v) == i
         );
         callback(null, uniqueCuisines);
-        this.idbHelper.addCuisines(uniqueCuisines);
+        this.idbHelper.putItemsToStore(uniqueCuisines, 'cuisines', true);
       });
     }
   }
@@ -265,7 +265,7 @@ class DBHelper {
         throw new Error('Restaurant favorite status not updated');
       const restaurant = await res.json();
 
-      this.idbHelper.addRestaurants([restaurant]);
+      this.idbHelper.putItemsToStore([restaurant], 'restaurants');
       return restaurant;
     } catch (err) {
       console.log(err);
@@ -284,7 +284,7 @@ class DBHelper {
       );
       const reviews = await res.json();
       // add newly fetched reviews to 'reviews' store
-      this.idbHelper.addReviews(reviews);
+      this.idbHelper.putItemsToStore(reviews, 'reviews');
 
       // post reviews in outbox store just in case
       // they weren't added in the sync event
@@ -326,10 +326,10 @@ class DBHelper {
       if (res.status !== 201) throw new Error('Review wasn\'t created');
 
       const createdReview = await res.json();
-      this.idbHelper.addReviews([createdReview]);
+      this.idbHelper.putItemsToStore([createdReview], 'reviews');
       return createdReview;
     } catch (err) {
-      await this.idbHelper.addReviewToOutbox(review);
+      this.idbHelper.putItemsToStore([review], 'reviews-outbox');
       this.snackbars.show({
         name: 'defer-offline',
         message: 'Failed to create review. Don\'t worry, We\'ll try again later!',
@@ -351,7 +351,7 @@ class DBHelper {
         const data = Object.assign({}, pr);
         delete data.id;
         const createdReview = await this.createNewReview(data);
-        this.idbHelper.addReviews([createdReview]);
+        this.idbHelper.putItemsToStore([createdReview], 'reviews');
         this.idbHelper.deleteReviewFromOutbox(pr.id);
       }
     } catch (err) {

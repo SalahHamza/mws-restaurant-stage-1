@@ -225,92 +225,6 @@ export default class IDBHelper {
     }
   }
 
-
-  /**
-   * adds neighborhoods to 'neighborhoods' store
-   * @param {array} neighborhoods - neighborhoods to add to 'neighborhoods' store
-   */
-  async addNeighborhoods(neighborhoods) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      const tx = db.transaction('neighborhoods', 'readwrite');
-      const store = tx.objectStore('neighborhoods');
-      for (const neighborhood of neighborhoods) {
-        store.put(neighborhood, neighborhood);
-      }
-      return tx.complete;
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  /**
-   * adds cuisines to 'cuisines' store
-   * @param {array} cuisines - cuisines to add to 'cuisines' store
-   */
-  async addCuisines(cuisines) {
-    try {
-
-      const db = await this.idbPromise;
-      if (!db) return;
-      const tx = db.transaction('cuisines', 'readwrite');
-      const store = tx.objectStore('cuisines');
-      for (const cuisine of cuisines) {
-        store.put(cuisine, cuisine);
-      }
-      return tx.complete;
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  /**
-   * adds restaurant to the 'restaurant' store
-   * @param {Array} restaurants - restaurant objects to add to IDB
-   */
-  async addRestaurants(restaurants) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('restaurants', 'readwrite');
-      const store = tx.objectStore('restaurants');
-      for(const restaurant of restaurants) {
-        store.put(restaurant);
-      }
-      return tx.complete;
-    } catch(err) {
-      console.log(err);
-    }
-  }
-
-  /**
-   * adds reviews to 'reviews' store
-   * @param {Array} reviews - reviews to add to IDB
-   */
-  async addReviews(reviews) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('reviews', 'readwrite');
-      const store = tx.objectStore('reviews');
-
-      for (const review of reviews) {
-        store.put(review);
-      }
-
-      return tx.complete;
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  /**
-
-   */
   /**
    * get All reviews for this restaurant id
    * (including the ones in outbox store)
@@ -338,27 +252,6 @@ export default class IDBHelper {
   }
 
 
-  /**
-   * adds the given review to the outbox (pending reviews) store
-   * @param {object} review - review data to add to the outbox store
-   */
-  async addReviewToOutbox(review) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('reviews-outbox', 'readwrite');
-      const store = tx.objectStore('reviews-outbox');
-
-      store.put(review);
-
-      return tx.complete;
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-
   async getReviewsFromOutbox(id) {
     try {
       const db = await this.idbPromise;
@@ -373,6 +266,40 @@ export default class IDBHelper {
       return await index.getAll(id);
     } catch (err) {
       console.log(`Failed to get reviews from outbox:\n${err}`);
+    }
+  }
+
+  /**
+   * Adds or updates items to IDB object store
+   * @param {Array} items - The item to update (or insert).
+   * @param {String} storeName - store to update (or insert) items into
+   * @param {Boolean} withKey - Checks whether or not the item to add/update
+   * requires a key in order to be added/updated. If yes, the item itself will be
+   * the key as well. Defaults to false.
+   */
+  async putItemsToStore(items, storeName, withKey=false) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) throw new Error('idbPromise failed to resolve db');
+
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+
+      if(withKey) {
+        for(const item of items) {
+          store.put(item, item);
+        }
+      } else {
+        for(const item of items) {
+          store.put(item);
+        }
+      }
+
+      console.log('added items to ', storeName, ' store');
+
+      return tx.complete;
+    } catch (err) {
+      console.log(err);
     }
   }
 
