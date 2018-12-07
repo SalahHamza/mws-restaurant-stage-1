@@ -160,13 +160,34 @@ export default class IDBHelper {
   async deleteItemFromStore(storeName, key) {
     try {
       const db = await this.idbPromise;
-      if (!db) if (!db) return;
+      if (!db) return;
 
       const tx = db.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
 
       store.delete(key);
       console.log(`Deleted one item from ${storeName} store with key=${key}`);
+
+      return tx.complete;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  /**
+   * Clears the content of an IDB store
+   * @param {String} storeName - The name of the store to clear
+   */
+  async clearStore(storeName) {
+    try {
+      const db = await this.idbPromise;
+      if (!db) return;
+
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+
+      store.clear();
+      console.log(`Cleared ${storeName} store`);
 
       return tx.complete;
     } catch (err) {
