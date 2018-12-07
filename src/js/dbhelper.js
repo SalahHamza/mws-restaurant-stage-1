@@ -1,7 +1,7 @@
 import '@babel/polyfill';
-import idb from 'idb';
 import Snackbars from '@salahhamza/snackbars';
 import IndexController from './indexController';
+import IDBHelper from './idbHelper';
 
 /*
  Change this to your base url in local env
@@ -19,7 +19,7 @@ const BASE_URL = (() => {
  */
 class DBHelper {
   constructor() {
-    this.openDatabase();
+    this.idbHelper = new IDBHelper();
 
     this.snackbars = new Snackbars(null, true);
     // initilizing indexController (register service worker)
@@ -54,50 +54,6 @@ class DBHelper {
   }
 
   /**
-   * Open a IDB database, create an objectStore,
-   * fetch restaurants and stores them
-   * @return {Promise} - idbPromise to access database
-   */
-  async openDatabase() {
-    // If the browser doesn't support service worker,
-    // we don't care about having a database
-    if (!navigator.serviceWorker) {
-      return Promise.resolve();
-    }
-
-    this.idbPromise = idb.open('reviews-app', 1, upgradeDb => {
-      // restaurants related stores/indexes
-      const restaurantsStore = upgradeDb.createObjectStore('restaurants', {
-        keyPath: 'id'
-      });
-      restaurantsStore.createIndex('by-cuisine', 'cuisine_type');
-      restaurantsStore.createIndex('by-neighborhood', 'neighborhood');
-
-      // category related stores/indexes
-      // store for cuisines
-      upgradeDb.createObjectStore('cuisines', {
-        autoIncrement: false
-      });
-      // store for neighborhoods
-      upgradeDb.createObjectStore('neighborhoods', {
-        autoIncrement: false
-      });
-
-      // reviews related stores/indexes
-      const reviewsStore = upgradeDb.createObjectStore('reviews', {
-        keyPath: 'id'
-      });
-      reviewsStore.createIndex('by-restaurant-id', 'restaurant_id');
-      /* an outbox store to hold (new) deferred reviews */
-      const reviewsOutboxStore = upgradeDb.createObjectStore('reviews-outbox', {
-        keyPath: 'id',
-        autoIncrement: true
-      });
-      reviewsOutboxStore.createIndex('by-restaurant-id', 'restaurant_id');
-    });
-  }
-
-  /**
    * Fetch all restaurants.
    */
   async fetchRestaurants(callback) {
@@ -105,42 +61,16 @@ class DBHelper {
       const res = await fetch(`${DBHelper.DATABASE_URL}/restaurants`);
       const restaurants = await res.json();
       callback(null, restaurants);
+      return;
     } catch (err) {
-      // fetchRestaurants method is called in the openDatabase
-      // method, but since inside openDatabase method
-      // this.idbPromise property is yet to be set, there won't be
-      // any conflic 'await undefined' yields 'undefined'
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      const restaurants = [];
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants');
-
-      // the getAll method sometimes doesn't work in Edge
-      // or it takes a lot of time to get the entries
-      // and since the fetchRestaurants is used to get
-      // cuisines, neighborhoods and the first restaurants
-      // display, we use the iterateCursor method to get all
-      // values of the said store
-      store.iterateCursor(cursor => {
-        if (!cursor) return;
-        restaurants.push(cursor.value);
-        cursor.continue();
-      });
-
-      // pausing the execution of the async function (with await)
-      // until transaction completes & then checking if we got
-      // any cuisines
-      await tx.complete;
-
-      if (!restaurants.length) {
-        const sentError = `Errors:\n${err}
-        No restaurant found in IDB`;
-        callback(sentError, null);
-      } else {
+      const restaurants = await this.idbHelper.getAllItemsFromStore(
+        'restaurants'
+      );
+      if (restaurants.length) {
         callback(null, restaurants);
+        return;
       }
+      callback('No restaurants found in idb', null);
     }
   }
 
@@ -154,24 +84,12 @@ class DBHelper {
       const restaurant = await res.json();
       callback(null, restaurant);
 
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      const tx = db.transaction('restaurants', 'readwrite');
-      const store = tx.objectStore('restaurants');
-      store.put(restaurant);
-
-      return tx.complete;
+      this.idbHelper.putItemsToStore([restaurant], 'restaurants');
     } catch (err) {
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants');
-
-      // get restaurant with this 'id'
-      const restaurant = await store.get(Number(id));
-
+      const restaurant = await this.idbHelper.getOneItemFromStore(
+        'restaurants',
+        Number(id)
+      );
       if (!restaurant) {
         const sentError = `Errors:\n${err}
         Restaurant not found in IDB`;
@@ -179,7 +97,6 @@ class DBHelper {
       } else {
         callback(null, restaurant);
       }
-      return tx.complete;
     }
   }
 
@@ -195,14 +112,12 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      const db = await this.idbPromise;
-      if (!db) return;
-      // const restaurants = [];
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants').index('by-cuisine');
-
-      const restaurants = await store.getAll(cuisine);
-
+      // getting restaurants from 'restaurants' store by cuisines
+      const restaurants = await this.idbHelper.getAllItemsFromIndex(
+        'restaurants',
+        'by-cuisine',
+        cuisine
+      );
       if (!restaurants.length) {
         const sentError = `Errors:\n${err}
         No restaurant found in IDB`;
@@ -210,7 +125,6 @@ class DBHelper {
       } else {
         callback(null, restaurants);
       }
-      return tx.complete;
     }
   }
 
@@ -226,15 +140,12 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      const db = await this.idbPromise;
-      if (!db) return;
-
-      // const restaurants = [];
-      const tx = db.transaction('restaurants');
-      const store = tx.objectStore('restaurants').index('by-neighborhood');
-
-      const restaurants = await store.getAll(neighborhood);
-
+      // getting restaurants from 'restaurants' store by neighborhoods
+      const restaurants = await this.idbHelper.getAllItemsFromIndex(
+        'restaurants',
+        'by-neighborhood',
+        neighborhood
+      );
       if (!restaurants.length) {
         const sentError = `Errors:\n${err}
         No restaurant found in IDB`;
@@ -242,7 +153,6 @@ class DBHelper {
       } else {
         callback(null, restaurants);
       }
-      return tx.complete;
     }
   }
 
@@ -279,27 +189,22 @@ class DBHelper {
       const restaurants = await res.json();
       callback(null, restaurants);
     } catch (err) {
-      const db = await this.idbPromise;
-      if (!db) return;
+      // getting restaurants from 'restaurants' store by neighborhood
+      let restaurants = await this.idbHelper.getAllItemsFromIndex(
+        'restaurants',
+        'by-neighborhood',
+        neighborhood
+      );
+      // only keeping the restaurants with this cuisine type
+      restaurants = restaurants.filter(
+        restaurant => restaurant.cuisine_type === cuisine
+      );
 
-      const tx = db.transaction('restaurants');
-      const index = tx.objectStore('restaurants').index('by-neighborhood');
-
-      // get all restaurants with this neighborhood
-      const restaurants = await index.getAll(neighborhood);
-
-      if (!restaurants.length) {
-        const sentError = `Errors:\n${err}
-        No restaurant found in IDB`;
-        callback(sentError, null);
-      } else {
-        // only keeping restaurants with this cuisine_type
-        const wantedRestaurants = restaurants.filter(
-          restaurant => restaurant.cuisine_type === cuisine
-        );
-        callback(null, wantedRestaurants);
+      if (restaurants.length) {
+        callback(null, restaurants);
+        return;
       }
-      return tx.complete;
+      callback(err, null);
     }
   }
 
@@ -308,23 +213,11 @@ class DBHelper {
    */
   async fetchNeighborhoods(callback) {
     try {
-      // fetching neighborhoods from IDB if they exist
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
+      const neighborhoods = await this.idbHelper.getAllItemsFromStore(
+        'neighborhoods'
+      );
 
-      const neighborhoods = [];
-      const tx = db.transaction('neighborhoods');
-      const store = tx.objectStore('neighborhoods');
-
-      store.iterateCursor(cursor => {
-        if (!cursor) return;
-        neighborhoods.push(cursor.value);
-        cursor.continue();
-      });
-
-      await tx.complete;
-
-      if (!neighborhoods.length) throw new Error('No cuisines found in IDB');
+      if (!neighborhoods.length) throw new Error('No neighborhoods in IDB');
       callback(null, neighborhoods);
     } catch (err) {
       // Fetch all restaurants and extract neighborhoods
@@ -343,16 +236,11 @@ class DBHelper {
           (v, i) => neighborhoods.indexOf(v) == i
         );
         callback(null, uniqueNeighborhoods);
-
-        const db = await this.idbPromise;
-        if (!db) return;
-
-        const tx = db.transaction('neighborhoods', 'readwrite');
-        const store = tx.objectStore('neighborhoods');
-        for (const neighborhood of uniqueNeighborhoods) {
-          store.put(neighborhood, neighborhood);
-        }
-        return tx.complete;
+        this.idbHelper.putItemsToStore(
+          uniqueNeighborhoods,
+          'neighborhoods',
+          true
+        );
       });
     }
   }
@@ -362,24 +250,9 @@ class DBHelper {
    */
   async fetchCuisines(callback) {
     try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
+      const cuisines = await this.idbHelper.getAllItemsFromStore('cuisines');
 
-      const cuisines = [];
-      const tx = db.transaction('cuisines');
-      const store = tx.objectStore('cuisines');
-
-      store.iterateCursor(cursor => {
-        if (!cursor) return;
-        cuisines.push(cursor.value);
-        cursor.continue();
-      });
-
-      // pausing the execution of the async function (with await)
-      // until transaction completes & then checking if we got
-      // any cuisines
-      await tx.complete;
-      if (!cuisines.length) throw new Error('No cuisine found in IDB');
+      if (!cuisines.length) throw new Error('No cuisines in IDB');
       callback(null, cuisines);
     } catch (err) {
       // Fetch all restaurants and extract cuisines
@@ -396,36 +269,8 @@ class DBHelper {
           (v, i) => cuisines.indexOf(v) == i
         );
         callback(null, uniqueCuisines);
-
-        const db = await this.idbPromise;
-        if (!db) return;
-        const tx = db.transaction('cuisines', 'readwrite');
-        const store = tx.objectStore('cuisines');
-        for (const cuisine of uniqueCuisines) {
-          store.put(cuisine, cuisine);
-        }
-        return tx.complete;
+        this.idbHelper.putItemsToStore(uniqueCuisines, 'cuisines', true);
       });
-    }
-  }
-
-  /**
-   * adds restaurant to the 'restaurant' store
-   * @param {Array} restaurants - restaurant objects to add to IDB
-   */
-  async addRestauransToIDB(restaurants) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('restaurants', 'readwrite');
-      const store = tx.objectStore('restaurants');
-      for(const restaurant of restaurants) {
-        store.put(restaurant);
-      }
-      return tx.complete;
-    } catch(err) {
-      console.log(err);
     }
   }
 
@@ -436,13 +281,17 @@ class DBHelper {
    */
   async updateRestaurantFavoriteStatus(id, newStatus) {
     try {
-      const url = `${DBHelper.DATABASE_URL}/restaurants/${id}?is_favorite=${newStatus}`;
+      const url = `${
+        DBHelper.DATABASE_URL
+      }/restaurants/${id}?is_favorite=${newStatus}`;
       const res = await fetch(url, { method: 'PUT' });
-      if(res.status !== 200) throw new Error('Restaurant favorite status not updated');
+      if (res.status !== 200)
+        throw new Error('Restaurant favorite status not updated');
       const restaurant = await res.json();
-      this.addRestauransToIDB([restaurant]);
+
+      this.idbHelper.putItemsToStore([restaurant], 'restaurants');
       return restaurant;
-    } catch(err) {
+    } catch (err) {
       console.log(err);
     }
   }
@@ -452,13 +301,22 @@ class DBHelper {
    */
   async fetchReviewsForRestaurantId(id) {
     try {
-      const pendingReviews = this.getReviewsFromOutbox(id);
       const res = await fetch(
         `${DBHelper.DATABASE_URL}/reviews?restaurant_id=${id}`
       );
       const reviews = await res.json();
-      // add newly fetched reviews to reviews store
-      this.addReviewsToIDB(reviews);
+      // add newly fetched reviews to 'reviews' store
+      this.idbHelper.putItemsToStore(reviews, 'reviews');
+
+      // if by any chance the outbox reviews weren't posted in
+      // the (background) sync event, we want to show them first,
+      // then try and post them again
+      const pendingReviews = this.idbHelper.getAllItemsFromIndex(
+        'reviews-outbox',
+        'by-restaurant-id',
+        id
+      );
+
       // post reviews in outbox store just in case
       // they weren't added in the sync event
       // Note: in practice, there is no need for
@@ -467,61 +325,37 @@ class DBHelper {
       // with internet (the success of the fetch event gives that out)
       this.postOutbox();
 
-      return DBHelper.sortByDate(reviews.concat(await pendingReviews));
+      const allReviews = reviews.concat(await pendingReviews);
+
+      return DBHelper.sortByDate(allReviews);
     } catch (err) {
       // falling back to IDB
-      // also sending error see what's the problem
-      return DBHelper.sortByDate(await this.getReviewsFromIDB(id, err));
-    }
-  }
+      // also sending error to see what's the problem
+      const reviews = this.idbHelper.getAllItemsFromIndex(
+        'reviews',
+        'by-restaurant-id',
+        id
+      );
+      const pendingReviews = this.idbHelper.getAllItemsFromIndex(
+        'reviews-outbox',
+        'by-restaurant-id',
+        id
+      );
 
-  /**
-   *
-   * @param {Array} reviews - reviews to add to IDB
-   */
-  async addReviewsToIDB(reviews) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('reviews', 'readwrite');
-      const store = tx.objectStore('reviews');
-
-      for (const review of reviews) {
-        store.put(review);
-      }
-
-      return tx.complete;
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  /**
-   * get All reviews for this restaurant id
-   */
-  async getReviewsFromIDB(id, error) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('reviews');
-      const index = tx.objectStore('reviews').index('by-restaurant-id');
-      const reviews = index.getAll(id);
-
-      // getting pending reviews, if there are any
-      const pendingReviews = this.getReviewsFromOutbox(id);
-
-      // concatenating and returning both
-      // reviews and pending reviews
-      return (await pendingReviews).concat(await reviews);
-    } catch (err) {
-      console.log(`Erros:\n${error}\n${err}`);
+      const allReviews = (await reviews).concat(await pendingReviews);
+      return DBHelper.sortByDate(allReviews);
     }
   }
 
   /**
    * Post request to create new review
+   */
+  /**
+   * POSTs a new review to the dev server, adds it
+   * to 'reviews' store on success, or to 'reviews-outbox'
+   * on fail and sends a sync event to post the review when
+   * user's connection is back
+   * @param {object} review - review data to send as body of fetch request
    */
   async createNewReview(review) {
     try {
@@ -533,17 +367,13 @@ class DBHelper {
       };
 
       const res = await fetch(url, options);
-
       if (res.status !== 201) throw new Error('Review wasn\'t created');
 
       const createdReview = await res.json();
-
-      // adding review to IDB
-      this.addReviewsToIDB([createdReview]);
-
+      this.idbHelper.putItemsToStore([createdReview], 'reviews');
       return createdReview;
     } catch (err) {
-      await this.addReviewToOutbox(review);
+      this.idbHelper.putItemsToStore([review], 'reviews-outbox');
       this.snackbars.show({
         name: 'defer-offline',
         message: 'Failed to create review. Don\'t worry, We\'ll try again later!',
@@ -556,74 +386,18 @@ class DBHelper {
   }
 
   /**
-   * adds the given review to the outbox (pending reviews) store
-   * @param {object} review - review data to add to the outbox store
-   */
-  async addReviewToOutbox(review) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('reviews-outbox', 'readwrite');
-      const store = tx.objectStore('reviews-outbox');
-
-      store.put(review);
-
-      return tx.complete;
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  async getReviewsFromOutbox(id) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('reviews-outbox');
-      const store = tx.objectStore('reviews-outbox');
-
-      if (!id) return await store.getAll();
-
-      const index = store.index('by-restaurant-id');
-      return await index.getAll(id);
-    } catch (err) {
-      console.log(`Failed to get reviews from outbox:\n${err}`);
-    }
-  }
-
-  /**
-   *
-   * @param {number} id - id of the review to delete
-   */
-  async deleteReviewFromOutbox(id) {
-    try {
-      const db = await this.idbPromise;
-      if (!db) throw new Error('idbPromise failed to resolve db');
-
-      const tx = db.transaction('reviews-outbox', 'readwrite');
-      const store = tx.objectStore('reviews-outbox');
-
-      store.delete(id);
-
-      return tx.complete;
-    } catch (err) {
-      console.log(`Failed to delete review from outbox:\n${err}`);
-    }
-  }
-
-  /**
    * posts pending reviews in the 'reviews-outbox' store
    */
   async postOutbox() {
     try {
-      const pendingReviews = await this.getReviewsFromOutbox();
+      const pendingReviews = await this.idbHelper.getAllItemsFromStore(
+        'reviews-outbox'
+      );
       for (const pr of pendingReviews) {
         const data = Object.assign({}, pr);
         delete data.id;
-        const createdReview = await this.createNewReview(data);
-        this.addReviewsToIDB([createdReview]);
-        this.deleteReviewFromOutbox(pr.id);
+        await this.createNewReview(data);
+        this.idbHelper.deleteItemFromStore('reviews-outbox', pr.id);
       }
     } catch (err) {
       console.log(`Failed to post reviews in outbox:\n${err}`);
