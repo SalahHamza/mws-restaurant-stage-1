@@ -305,6 +305,10 @@ class DBHelper {
         `${DBHelper.DATABASE_URL}/reviews?restaurant_id=${id}`
       );
       const reviews = await res.json();
+      // clearing the items of reviews store to stay
+      // in sync with server's data
+      // (i.e. if another user deletes a review <future feature>)
+      await this.idbHelper.clearStore('reviews');
       // add newly fetched reviews to 'reviews' store
       this.idbHelper.putItemsToStore(reviews, 'reviews');
 
