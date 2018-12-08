@@ -2,12 +2,14 @@
 const version = '<<-!version->>';
 const staticCacheName = `reviews-app--static-${version}`;
 const contentImgsCacheName = 'reviews-app--content-imgs';
-const allCaches = [staticCacheName, contentImgsCacheName];
+const fontsCacheName = 'reviews-app--fonts';
+const allCaches = [staticCacheName, contentImgsCacheName, fontsCacheName];
 
 /*
   this is an array of all fingerprinted filenames
   which will be set dynamically when sending the file.
   this is done with static-module
+  check '/sw.js' route in '/server/routes.js' for more details
 */
 const staticToCache = require('static-to-cache')();
 
@@ -19,14 +21,12 @@ const toCache = [
   './manifest.json',
   ...staticToCache,
   /* will work as replacement to images */
-  './assets/offline.png',
-  /* Cashing font face */
-  'https://fonts.googleapis.com/css?family=Lato:400,700'
+  './assets/offline.png'
 ];
 
 addEventListener('install', event => {
   event.waitUntil(
-    (async function () {
+    (async function() {
       console.log('caching assets');
       const cache = await caches.open(staticCacheName);
       await cache.addAll(toCache);
@@ -36,7 +36,7 @@ addEventListener('install', event => {
 
 addEventListener('activate', event => {
   event.waitUntil(
-    (async function () {
+    (async function() {
       const keys = await caches.keys();
       await Promise.all(
         keys
@@ -50,18 +50,7 @@ addEventListener('activate', event => {
 });
 
 /*
-  - If request if for an inside page respond with '/restaurant'
-  - If it's a MAP API asset request:
-    - if there is internet access:
-     * fetch new data from the network.
-     * update cache with new data.
-    - else:
-      * match the cache for a similar request and respond with it
-  - else:
-    match other requests
-    - if request for an image respond with offline.png image
-
-NOTE: the offline image was inspired by james priest's
+NOTE: the offline image (in servePhotos()) was inspired by james priest's
 https://james-priest.github.io/mws-restaurant-stage-1/stage1.html
 
 NOTE: overall handling of the service worker is self implemented due
@@ -72,9 +61,9 @@ NOTE: learnt async/await implementation in service worker
 in this Supercharged video by Jake Archibald & Surma
 https://www.youtube.com/watch?v=3Tr-scf7trE&t=2018s
 
-NOTE: Caching everything that comes from the MAPBOX API is not
-a good idea since the content size increases quickly
-(kept it to work on it later - commented)
+NOTE: Removed MAP caching because caching everything that
+comes from the MAPBOX API is not a good idea since the
+content to cache is too much
 
 */
 addEventListener('fetch', event => {
@@ -86,7 +75,7 @@ addEventListener('fetch', event => {
     // only match /restaurant.html or /restaurant
     if (/^\/restaurant(\.html)?$/.test(requestUrl.pathname)) {
       event.respondWith(
-        (async function () {
+        (async function() {
           const cachedResponse = await caches.match('./restaurant');
           // if there is no match the cachedResponse will be 'null' (i.e. falsey)
           if (cachedResponse) return cachedResponse;
@@ -106,10 +95,16 @@ addEventListener('fetch', event => {
       return;
     }
   }
+  // font related request: google fonts & myfontastic(icons)
+  if (isFontRelated(requestUrl.href)) {
+    console.log('here', requestUrl.href);
+    event.respondWith(serveFonts(event.request));
+    return;
+  }
 
   // other requests
   event.respondWith(
-    (async function () {
+    (async function() {
       const cachedResponse = await caches.match(event.request);
       if (cachedResponse) return cachedResponse;
 
@@ -128,8 +123,6 @@ addEventListener('message', event => {
     self.skipWaiting();
   }
 });
-
-
 
 /* ========== Helper functions ========== */
 
@@ -216,6 +209,37 @@ async function imageFetchAndCache({ cache, request, storageUrl, size }) {
   const res = new Response(blob, { headers });
   await cache.put(storageUrl, res.clone());
   return res;
+}
+
+/**
+ * checks if url matches the pattern for
+ * google fonts or myfontastic urls
+ * @param {String} url - url to check
+ * @returns {Boolean} - returns true if url matches pattern, else false.
+ */
+function isFontRelated(url) {
+  const pattern =
+    'https://(?:file|fonts).(?:googleapis|gstatic|myfontastic).com/(.*)';
+  return new RegExp(pattern).test(url);
+}
+/**
+ * serves cached response if it exists
+ * else, fetch response, caches clone then
+ * serves response
+ * @param {Object} request - request object
+ */
+async function serveFonts(request) {
+  // opening cache and getting cached response if it exists
+  const cache = await caches.open(fontsCacheName);
+  const cachedResponse = await cache.match(request);
+  if (cachedResponse) return cachedResponse;
+  try {
+    const fetchedResponse = await fetch(request);
+    cache.put(request, fetchedResponse.clone());
+    return fetchedResponse;
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 /* ================== Background sync related ================== */
@@ -311,7 +335,6 @@ async function createNewReview(review) {
  */
 async function handleReviewCreated(db, review, id) {
   try {
-
     const tx = db.transaction(['reviews-outbox', 'reviews'], 'readwrite');
     const outboxStore = tx.objectStore('reviews-outbox');
     getPromise(() => outboxStore.delete(id));
@@ -334,13 +357,11 @@ async function handleReviewCreated(db, review, id) {
   }
 }
 
-
 // caching the idbPromise in the global scope
 // so that we don't run openDB() function everytime
 // read more about this here:
 // https://stackoverflow.com/questions/38835273/when-does-code-in-a-service-worker-outside-of-an-event-handler-run/38835274#38835274
 let idbPromise;
-
 
 /**
  * posts reviews in 'reviews-outbox' store, adds them to
