@@ -327,6 +327,15 @@ class RestaurantInfo {
       'click',
       this.handleReviewSubmission.bind(this)
     );
+
+
+
+    // close the form on ESC button press
+    document.addEventListener('keydown', event => {
+      if(event.key === 'Escape' || event.key === 'Esc'){
+        closeForm();
+      }
+    });
   }
 
   /**
