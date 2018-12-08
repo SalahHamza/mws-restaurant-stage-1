@@ -49,13 +49,22 @@ npm install
 
 **Note**: Make sure you are inside the project directory.
 
+#### Quick Start
+
+To quickly generate the optimized assets and run server, run:
+```bash
+gulp build && npm run serve
+```
+
+More details in the following sections.
+
 #### Run task runner
 
 After that make sure to run Gulp in order to generate the needed assests (stylesheets, images, js, ...etc).
 
 Run the build task to generate files for production
 
-```
+```bash
 gulp build
 ```
 
@@ -65,7 +74,7 @@ Run the default task to generate files + live editing (with browser-sync):
 gulp
 ```
 
-**Note**: browsersync is used with proxy, so make sure to [spin up the server](#start-server).
+**Note**: Browsersync is used with proxy, so make sure to [spin up the server](#start-server) first.
 
 #### Start server
 
