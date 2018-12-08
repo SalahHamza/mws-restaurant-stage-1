@@ -323,8 +323,6 @@ class RestaurantInfo {
     // before it is opened is always the 'create new review' button
     // so we don't need about not keeping up with it every time
     const toFocusElem = document.activeElement;
-    const cancelBtn = form.querySelector('.form-cancel');
-    const submitBtn = form.querySelector('.form-submit');
 
     // closes the form container which contains form
     const closeForm = () => {
@@ -332,9 +330,11 @@ class RestaurantInfo {
       toFocusElem.focus();
     };
 
-    // hide review form on cancel button click
-    cancelBtn.addEventListener('click', closeForm);
 
+    const cancelBtn = form.querySelector('.form-cancel');
+    const submitBtn = form.querySelector('.form-submit');
+
+    cancelBtn.addEventListener('click', closeForm);
     submitBtn.addEventListener('click', this.handleReviewSubmission.bind(this));
 
     // close the form on ESC button press
@@ -355,12 +355,18 @@ class RestaurantInfo {
       }
     });
 
-
-    const firstTabStop = form.querySelector('input');
+    const firstTabStop = form.querySelector('input[name=name]');
+    const lastTabStop = submitBtn;
 
     // we focus the first "tabable" element in the form
     firstTabStop.setAttribute('tabindex', '0');
+    lastTabStop.setAttribute('tabindex', '0');
     this._firstTabStop = firstTabStop;
+
+    form.addEventListener(
+      'keydown',
+      RestaurantInfo.trapTabKey.bind(null, firstTabStop, lastTabStop)
+    );
   }
 
   /**
@@ -417,6 +423,34 @@ class RestaurantInfo {
     ${commentFieldHTML}
     ${btnFieldHTML}`.replace(/  +/g, ' ');
     // removing occurences of 2 spaces or more
+  }
+
+  /**
+   * Traps the Tab key in a modal/modal-like elements (review form)
+   * @param {Objecy} firstTabStop - first "tabable" element in modal
+   * @param {Object} lastTabStop - last "tabable" element in modal
+   * @param {Object} event - Event Object
+   */
+  static trapTabKey(firstTabStop, lastTabStop, event) {
+    if(event.key === 'Tab') {
+      // SHIFT + TAB
+      if(event.shiftKey) {
+        // if the currently active element is the first element
+        // we go around and focus the last element
+        if(document.activeElement.isSameNode(firstTabStop)) {
+          event.preventDefault();
+          lastTabStop.focus();
+        }
+        return;
+      } else {
+        // if the currently active element is the last element
+        // we focus the first element
+        if(document.activeElement.isSameNode(lastTabStop)) {
+          event.preventDefault();
+          firstTabStop.focus();
+        }
+      }
+    }
   }
 
   /**
