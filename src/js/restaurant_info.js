@@ -293,25 +293,46 @@ class RestaurantInfo {
     const formContainer = document.querySelector('.review-form-wrapper');
     if (!this.pageHasForm) {
       // maybe I'll need to request an animation frame here
-      formContainer.appendChild(
-        this.createReviewForm(this.handleReviewSubmission.bind(this))
-      );
+      this.createReviewForm(formContainer);
       this.pageHasForm = true;
     }
     formContainer.classList.add('visible');
   }
 
   /**
-   * create review form element
-   * review form was inspired by the Web a11y tutorial for custom
-   * elements: https://www.w3.org/WAI/tutorials/forms/custom-controls/
+   * Create review form element
+   * review form stars concept from Web a11y tutorial for
+   * custom controls
+   * https://www.w3.org/WAI/tutorials/forms/custom-controls/
    *
-   * @param {function} handleSubmit - handler for the submit button click
+   * @param {Object} - DOM Object to append form to
    */
-  createReviewForm(handleSubmit) {
+  createReviewForm(parent) {
     const form = document.createElement('form');
     form.className = 'review-form-container';
+    form.innerHTML = RestaurantInfo.createReviewFormInnerHTML();
+    // appending the review form
+    parent.appendChild(form);
 
+    // closes the form container which contains form
+    const closeForm = () => {
+      parent.classList.remove('visible');
+    };
+
+    // hide review form on cancel button click
+    form.querySelector('.form-cancel')
+      .addEventListener('click', closeForm);
+
+    form.querySelector('.form-submit').addEventListener(
+      'click',
+      this.handleReviewSubmission.bind(this)
+    );
+  }
+
+  /**
+   * Creates the innerHTML of the review form
+   */
+  static createReviewFormInnerHTML() {
     const nameFieldHTML = `<label class="form-item">
       <span class="form-item-label">Name:</span>
       <input name="name" type="text" placeholder="John"/>
@@ -342,13 +363,12 @@ class RestaurantInfo {
     const commentFieldHTML = `<label class="form-item">
     <span class="form-item-label">Comments:</span>
     <textarea
-      placeholder="Your comments (in 20 letters or more)s"
-      name="comment" id="review-comment" rows="10"
+    placeholder="Your comments (in 20 letters or more)s"
+    name="comment" id="review-comment" rows="10"
     ></textarea>
     </label>`;
 
-    const btnFieldHTML = `
-    <span class="btn-container">
+    const btnFieldHTML = `<span class="btn-container">
     <button
       type="button" class="form-cancel btn"
     >Cancel</button>
@@ -357,23 +377,12 @@ class RestaurantInfo {
     >Submit</button>
     </span>`;
 
-    form.innerHTML = `<h3>Tell people what you think!</h3>
+    return (`<h3>Tell people what you think!</h3>
     ${nameFieldHTML}
     ${ratingFieldHTML}
     ${commentFieldHTML}
-    ${btnFieldHTML}`;
-
-    // hide review form on cancel button click
-    form.querySelector('.btn.form-cancel').onclick = () => {
-      document
-        .querySelector('.review-form-wrapper')
-        .classList.remove('visible');
-    };
-
-    // handle form submission on click
-    form.querySelector('.btn.form-submit').onclick = handleSubmit;
-
-    return form;
+    ${btnFieldHTML}`).replace(/  +/g, ' ');
+    // removing occurences of 2 spaces or more
   }
 
   /**
