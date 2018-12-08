@@ -293,25 +293,86 @@ class RestaurantInfo {
     const formContainer = document.querySelector('.review-form-wrapper');
     if (!this.pageHasForm) {
       // maybe I'll need to request an animation frame here
-      formContainer.appendChild(
-        this.createReviewForm(this.handleReviewSubmission.bind(this))
-      );
+      this.createReviewForm(formContainer);
       this.pageHasForm = true;
     }
     formContainer.classList.add('visible');
+    // we focus first tab'able' element in
+    // the review form
+    if(this._firstTabStop) {
+      this._firstTabStop.focus();
+    }
   }
 
   /**
-   * create review form element
-   * review form was inspired by the Web a11y tutorial for custom
-   * elements: https://www.w3.org/WAI/tutorials/forms/custom-controls/
+   * Create review form element
+   * review form stars concept from Web a11y tutorial for
+   * custom controls
+   * https://www.w3.org/WAI/tutorials/forms/custom-controls/
    *
-   * @param {function} handleSubmit - handler for the submit button click
+   * @param {Object} - DOM Object to append form to
    */
-  createReviewForm(handleSubmit) {
+  createReviewForm(parent) {
     const form = document.createElement('form');
     form.className = 'review-form-container';
+    form.innerHTML = RestaurantInfo.createReviewFormInnerHTML();
+    // appending the review form
+    parent.appendChild(form);
 
+    // For the review form the element that was focused
+    // before it is opened is always the 'create new review' button
+    // so we don't need about not keeping up with it every time
+    const toFocusElem = document.activeElement;
+
+    // closes the form container which contains form
+    const closeForm = () => {
+      parent.classList.remove('visible');
+      toFocusElem.focus();
+    };
+
+
+    const cancelBtn = form.querySelector('.form-cancel');
+    const submitBtn = form.querySelector('.form-submit');
+
+    cancelBtn.addEventListener('click', closeForm);
+    submitBtn.addEventListener('click', this.handleReviewSubmission.bind(this));
+
+    // close the form on ESC button press
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' || event.key === 'Esc') {
+        closeForm();
+      }
+    });
+
+    // close form on overlay click
+    // Note: form.parentNode is the same as parent,
+    // but just for "safety" purposes
+    form.parentNode.addEventListener('click', event => {
+      // if the target is not the form itself
+      // or one if its children (i.e the overlay)
+      if (!form.contains(event.target)) {
+        closeForm();
+      }
+    });
+
+    const firstTabStop = form.querySelector('input[name=name]');
+    const lastTabStop = submitBtn;
+
+    // we focus the first "tabable" element in the form
+    firstTabStop.setAttribute('tabindex', '0');
+    lastTabStop.setAttribute('tabindex', '0');
+    this._firstTabStop = firstTabStop;
+
+    form.addEventListener(
+      'keydown',
+      RestaurantInfo.trapTabKey.bind(null, firstTabStop, lastTabStop)
+    );
+  }
+
+  /**
+   * Creates the innerHTML of the review form
+   */
+  static createReviewFormInnerHTML() {
     const nameFieldHTML = `<label class="form-item">
       <span class="form-item-label">Name:</span>
       <input name="name" type="text" placeholder="John"/>
@@ -342,13 +403,12 @@ class RestaurantInfo {
     const commentFieldHTML = `<label class="form-item">
     <span class="form-item-label">Comments:</span>
     <textarea
-      placeholder="Your comments (in 20 letters or more)s"
-      name="comment" id="review-comment" rows="10"
+    placeholder="Your comments (in 20 letters or more)s"
+    name="comment" id="review-comment" rows="10"
     ></textarea>
     </label>`;
 
-    const btnFieldHTML = `
-    <span class="btn-container">
+    const btnFieldHTML = `<span class="btn-container">
     <button
       type="button" class="form-cancel btn"
     >Cancel</button>
@@ -357,27 +417,45 @@ class RestaurantInfo {
     >Submit</button>
     </span>`;
 
-    form.innerHTML = `<h3>Tell people what you think!</h3>
+    return `<h3>Tell people what you think!</h3>
     ${nameFieldHTML}
     ${ratingFieldHTML}
     ${commentFieldHTML}
-    ${btnFieldHTML}`;
+    ${btnFieldHTML}`.replace(/  +/g, ' ');
+    // removing occurences of 2 spaces or more
+  }
 
-    // hide review form on cancel button click
-    form.querySelector('.btn.form-cancel').onclick = () => {
-      document
-        .querySelector('.review-form-wrapper')
-        .classList.remove('visible');
-    };
-
-    // handle form submission on click
-    form.querySelector('.btn.form-submit').onclick = handleSubmit;
-
-    return form;
+  /**
+   * Traps the Tab key in a modal/modal-like elements (review form)
+   * @param {Objecy} firstTabStop - first "tabable" element in modal
+   * @param {Object} lastTabStop - last "tabable" element in modal
+   * @param {Object} event - Event Object
+   */
+  static trapTabKey(firstTabStop, lastTabStop, event) {
+    if(event.key === 'Tab') {
+      // SHIFT + TAB
+      if(event.shiftKey) {
+        // if the currently active element is the first element
+        // we go around and focus the last element
+        if(document.activeElement.isSameNode(firstTabStop)) {
+          event.preventDefault();
+          lastTabStop.focus();
+        }
+        return;
+      } else {
+        // if the currently active element is the last element
+        // we focus the first element
+        if(document.activeElement.isSameNode(lastTabStop)) {
+          event.preventDefault();
+          firstTabStop.focus();
+        }
+      }
+    }
   }
 
   /**
    * handle review form submit button click
+   * @param {Object} event - Event object
    */
   async handleReviewSubmission(event) {
     event.preventDefault();
