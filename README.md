@@ -35,7 +35,7 @@ PORT=3000
 API_KEY_SECRET=apiKeyId:Mapbox
 ```
 
-:ballot_box_with_check: You also need to have the local dev server from which your app receives data. You can check the [dev server's docs](https://github.com/SalahHamza/mws-restaurant-stage-2#local-development-api-server) for more information.
+:ballot_box_with_check: You also need to have the local dev server from which your app receives data. You can check the [dev server's docs](https://github.com/SalahHamza/mws-restaurant-stage-3#local-development-api-server) for more information.
 
 ### Installing
 
