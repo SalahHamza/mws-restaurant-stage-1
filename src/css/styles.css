@@ -256,6 +256,13 @@ nav {
 	background-color: var(--secondary-color-lt);
 }
 
+/* the color of attribution links of mapbox doesn't
+meet the WEBAIM specification for an accessible color
+so we overried it with a cleared color */
+.leaflet-control-attribution > a {
+  color: #000!important;
+}
+
 /* ====================== Restaurant Filtering ====================== */
 .filter-wrapper {
   width: 100%;
