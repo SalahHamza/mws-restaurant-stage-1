@@ -320,19 +320,26 @@ class RestaurantInfo {
     };
 
     // hide review form on cancel button click
-    form.querySelector('.form-cancel')
-      .addEventListener('click', closeForm);
+    form.querySelector('.form-cancel').addEventListener('click', closeForm);
 
-    form.querySelector('.form-submit').addEventListener(
-      'click',
-      this.handleReviewSubmission.bind(this)
-    );
-
-
+    form
+      .querySelector('.form-submit')
+      .addEventListener('click', this.handleReviewSubmission.bind(this));
 
     // close the form on ESC button press
     document.addEventListener('keydown', event => {
-      if(event.key === 'Escape' || event.key === 'Esc'){
+      if (event.key === 'Escape' || event.key === 'Esc') {
+        closeForm();
+      }
+    });
+
+    // close form on overlay click
+    // Note: form.parentNode is the same as parent,
+    // but just for "safety" purposes
+    form.parentNode.addEventListener('click', event => {
+      // if the target is not the form itself
+      // or one if its children (i.e the overlay)
+      if (!form.contains(event.target)) {
         closeForm();
       }
     });
@@ -386,11 +393,11 @@ class RestaurantInfo {
     >Submit</button>
     </span>`;
 
-    return (`<h3>Tell people what you think!</h3>
+    return `<h3>Tell people what you think!</h3>
     ${nameFieldHTML}
     ${ratingFieldHTML}
     ${commentFieldHTML}
-    ${btnFieldHTML}`).replace(/  +/g, ' ');
+    ${btnFieldHTML}`.replace(/  +/g, ' ');
     // removing occurences of 2 spaces or more
   }
 
