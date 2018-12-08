@@ -297,6 +297,11 @@ class RestaurantInfo {
       this.pageHasForm = true;
     }
     formContainer.classList.add('visible');
+    // we focus first tab'able' element in
+    // the review form
+    if(this._firstTabStop) {
+      this._firstTabStop.focus();
+    }
   }
 
   /**
@@ -318,6 +323,8 @@ class RestaurantInfo {
     // before it is opened is always the 'create new review' button
     // so we don't need about not keeping up with it every time
     const toFocusElem = document.activeElement;
+    const cancelBtn = form.querySelector('.form-cancel');
+    const submitBtn = form.querySelector('.form-submit');
 
     // closes the form container which contains form
     const closeForm = () => {
@@ -326,11 +333,9 @@ class RestaurantInfo {
     };
 
     // hide review form on cancel button click
-    form.querySelector('.form-cancel').addEventListener('click', closeForm);
+    cancelBtn.addEventListener('click', closeForm);
 
-    form
-      .querySelector('.form-submit')
-      .addEventListener('click', this.handleReviewSubmission.bind(this));
+    submitBtn.addEventListener('click', this.handleReviewSubmission.bind(this));
 
     // close the form on ESC button press
     document.addEventListener('keydown', event => {
@@ -349,6 +354,13 @@ class RestaurantInfo {
         closeForm();
       }
     });
+
+
+    const firstTabStop = form.querySelector('input');
+
+    // we focus the first "tabable" element in the form
+    firstTabStop.setAttribute('tabindex', '0');
+    this._firstTabStop = firstTabStop;
   }
 
   /**
@@ -409,6 +421,7 @@ class RestaurantInfo {
 
   /**
    * handle review form submit button click
+   * @param {Object} event - Event object
    */
   async handleReviewSubmission(event) {
     event.preventDefault();
