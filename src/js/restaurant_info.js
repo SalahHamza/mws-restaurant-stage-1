@@ -314,9 +314,15 @@ class RestaurantInfo {
     // appending the review form
     parent.appendChild(form);
 
+    // For the review form the element that was focused
+    // before it is opened is always the 'create new review' button
+    // so we don't need about not keeping up with it every time
+    const toFocusElem = document.activeElement;
+
     // closes the form container which contains form
     const closeForm = () => {
       parent.classList.remove('visible');
+      toFocusElem.focus();
     };
 
     // hide review form on cancel button click
