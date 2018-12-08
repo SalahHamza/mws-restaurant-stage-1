@@ -1,4 +1,5 @@
 import DBHelper from './dbhelper';
+import lazySizes from 'lazysizes';
 
 class MainPage {
   constructor() {
@@ -6,6 +7,7 @@ class MainPage {
     this.cuisines = [];
     this.markers = [];
     this.dbHelper = new DBHelper();
+    lazySizes.init();
   }
 
   /**********************
@@ -142,20 +144,21 @@ class MainPage {
     /* image size to use as fallback in src */
     const defaultSize = '400';
     const image = document.createElement('img');
-    image.className = 'restaurant-img';
-    image.src = DBHelper.imageUrlForRestaurant(
+    image.className = 'restaurant-img lazyload';
+    const dataSrc = DBHelper.imageUrlForRestaurant(
       // since 'photograph' is the same as 'id'
       // we fallback to the 'id'
       restaurant.photograph || restaurant.id,
       defaultSize
     );
-    image.srcset = DBHelper.imageSrcsetForRestaurant(
+    const dataSrcset = DBHelper.imageSrcsetForRestaurant(
       restaurant.photograph || restaurant.id,
       imgSizes
     );
-    image.sizes = `(min-width: 416px) and (max-width: 632px) 400px,
-                  (min-width: 1248px) 400px,
-                  300px`;
+    image.setAttribute('data-src', dataSrc);
+    image.setAttribute('data-srcset', dataSrcset);
+    image.setAttribute('data-sizes', 'auto');
+
     image.alt = `This is an image of the ${restaurant.name} restaurant`;
     li.append(image);
 
